@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+from datetime import datetime, timedelta
 from html import unescape
 
 from dotenv import load_dotenv
@@ -16,6 +17,7 @@ from models import Document, User, UploadedPaper
 from services.openalex import (
     get_author_profile,
     get_paper,
+    get_trending_papers,
     normalize_author_id,
     search_authors,
     search_papers,
@@ -25,6 +27,24 @@ load_dotenv()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+# Home page feed: a few fixed sub-fields, titled casually rather than as
+# bare academic keywords. Categories/copy are a first guess — worth
+# revisiting once we can see what people actually engage with.
+FEED_CATEGORIES = [
+    {"query": "agricultural economics", "title": "Farmonomics 101"},
+    {"query": "food science", "title": "What's Cooking in Food Science"},
+    {"query": "agricultural technology", "title": "Smart Farms, Cool Tech"},
+    {"query": "sustainable agriculture", "title": "Growing It Green"},
+]
+
+# Every visit to "/" would otherwise fire 4 fresh OpenAlex queries — for
+# a page every visitor sees, that's needless load and an easy way to get
+# rate-limited. Cache each category's results in-process for a while;
+# results are the same for everyone, so there's nothing user-specific to
+# invalidate on.
+FEED_CACHE_TTL = timedelta(minutes=30)
+_feed_cache = {}
 
 MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads", "papers")
@@ -147,6 +167,43 @@ def _existing_citation_ids(doc):
     return {unescape(raw_id) for raw_id in CITATION_ID_RE.findall(doc.body_html)}
 
 
+def _annotate_already_added(papers, current_document):
+    existing_citation_ids = _existing_citation_ids(current_document)
+    for paper in papers:
+        identifier = paper.get("doi") or paper.get("id")
+        paper["already_added"] = bool(identifier) and identifier in existing_citation_ids
+
+
+def _cached_trending_papers(query):
+    now = datetime.utcnow()
+    cached = _feed_cache.get(query)
+    if cached and now - cached[0] < FEED_CACHE_TTL:
+        return cached[1]
+
+    try:
+        papers = get_trending_papers(query)
+    except RequestException:
+        # Stale results beat none — keep showing the last good fetch
+        # rather than a blank section until the next successful refresh.
+        return cached[1] if cached else []
+
+    _feed_cache[query] = (now, papers)
+    return papers
+
+
+def _build_feed(current_document):
+    feed = []
+    for category in FEED_CATEGORIES:
+        # _annotate_already_added mutates each paper dict, and the cache
+        # is shared across every visitor — copy before annotating so one
+        # user's "already added" state can't leak into the shared cache
+        # and bleed into everyone else's view of the feed.
+        papers = [dict(p) for p in _cached_trending_papers(category["query"])]
+        _annotate_already_added(papers, current_document)
+        feed.append({"title": category["title"], "papers": papers})
+    return feed
+
+
 def _citation_block_html(title, authors, year, journal, doi, paper_id):
     # escape() returns a Markup, whose `+=` auto-escapes *anything* appended
     # to it — including our own literal `<em>`/`<p>` tags. Cast each escaped
@@ -180,6 +237,7 @@ def _citation_block_html(title, authors, year, journal, doi, paper_id):
 
 @app.route("/")
 def home():
+    current_document = _current_document()
     return render_template(
         "index.html",
         query="",
@@ -187,7 +245,8 @@ def home():
         papers=[],
         authors=[],
         error=None,
-        current_document=_current_document(),
+        current_document=current_document,
+        feed=_build_feed(current_document),
     )
 
 
@@ -219,10 +278,7 @@ def search():
                 error = "Could not reach OpenAlex right now. Please try again."
 
     current_document = _current_document()
-    existing_citation_ids = _existing_citation_ids(current_document)
-    for paper in papers:
-        identifier = paper.get("doi") or paper.get("id")
-        paper["already_added"] = bool(identifier) and identifier in existing_citation_ids
+    _annotate_already_added(papers, current_document)
 
     return render_template(
         "index.html",
@@ -232,6 +288,7 @@ def search():
         authors=authors,
         error=error,
         current_document=current_document,
+        feed=[],
     )
 
 

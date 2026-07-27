@@ -196,6 +196,15 @@ button:hover, .btn:hover {
     text-decoration: none;
 }
 
+/* Home page feed */
+.feed-section {
+    margin-bottom: 36px;
+}
+
+.feed-section h2 {
+    margin-bottom: 14px;
+}
+
 /* Popular search chips */
 .chip-row {
     display: flex;

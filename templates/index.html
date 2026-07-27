@@ -2,6 +2,113 @@
 
 {% block title %}vo.agri{% endblock %}
 
+{% macro paper_card(paper) %}
+
+    <div class="paper-card">
+
+        <div class="paper-card-summary">
+
+            <h3>
+                {% if paper.id %}
+                    <a href="{{ url_for('paper_detail', work_id=paper.id) }}">{{ paper.title }}</a>
+                {% else %}
+                    {{ paper.title }}
+                {% endif %}
+            </h3>
+
+            {% if paper.doi %}
+                <a class="badge badge-verified" href="{{ paper.doi }}" target="_blank">Verified &middot; DOI</a>
+            {% else %}
+                <span class="badge badge-verified">Verified</span>
+            {% endif %}
+
+            <p class="paper-info">
+                <strong>Authors:</strong>
+
+                {% if paper.authors %}
+                    {% for author in paper.authors[:3] %}
+                        {% if author.id %}
+                            <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
+                        {% else %}
+                            {{ author.name }}
+                        {% endif %}{% if not loop.last %}, {% endif %}
+                    {% endfor %}
+                {% else %}
+                    Unknown
+                {% endif %}
+
+            </p>
+
+            {% if paper.rank_reason %}
+                <p class="paper-info rank-reason">
+                    {{ paper.rank_reason }}
+                </p>
+            {% endif %}
+
+            {% if current_document and paper.already_added %}
+                <button type="button" class="btn-small btn-disabled" disabled>Already added</button>
+            {% elif current_document %}
+                <form method="POST" action="{{ url_for('add_citation', doc_id=current_document.id) }}" class="add-to-doc-form">
+                    <input type="hidden" name="title" value="{{ paper.title }}">
+                    <input type="hidden" name="authors" value="{{ paper.authors[:3]|map(attribute='name')|join(', ') if paper.authors else 'Unknown' }}">
+                    <input type="hidden" name="year" value="{{ paper.year or '' }}">
+                    <input type="hidden" name="journal" value="{{ paper.journal or '' }}">
+                    <input type="hidden" name="doi" value="{{ paper.doi or '' }}">
+                    <input type="hidden" name="paper_id" value="{{ paper.id or '' }}">
+                    <button type="submit" class="btn-small">+ Add to "{{ current_document.title }}"</button>
+                </form>
+            {% elif current_user.is_authenticated %}
+                <p class="paper-info add-to-doc-prompt">
+                    <a href="{{ url_for('documents') }}">Create a document</a> to start saving citations.
+                </p>
+            {% else %}
+                <p class="paper-info add-to-doc-prompt">
+                    <a href="{{ url_for('login') }}">Log in</a> to save citations to a document.
+                </p>
+            {% endif %}
+
+        </div>
+
+        <div class="paper-card-details">
+            <div class="paper-card-details-inner">
+
+                <p class="paper-info">
+                    <strong>Year:</strong>
+                    {{ paper.year or "Unknown" }}
+                </p>
+
+                <p class="paper-info">
+                    <strong>Journal:</strong>
+                    {{ paper.journal }}
+                </p>
+
+                {% if paper.abstract %}
+                    <p class="paper-info">
+                        <strong>Abstract:</strong>
+                        {{ paper.abstract|truncate(300) }}
+                    </p>
+                {% endif %}
+
+                <p class="paper-info">
+                    <strong>Citations:</strong>
+                    {{ paper.citations }}
+                </p>
+
+                {% if paper.doi %}
+                    <p class="paper-info">
+                        <a href="{{ paper.doi }}" target="_blank">
+                            Open Paper
+                        </a>
+                    </p>
+                {% endif %}
+
+            </div>
+        </div>
+
+    </div>
+
+{% endmacro %}
+
 {% block content %}
 
     <div class="hero">
@@ -46,6 +153,22 @@
                 <a class="chip" href="{{ url_for('search') }}?q={{ topic|urlencode }}">{{ topic }}</a>
             {% endfor %}
         </div>
+    {% endif %}
+
+    {% if not query %}
+        {% for category in feed %}
+            {% if category.papers %}
+                <div class="feed-section">
+
+                    <h2>{{ category.title }}</h2>
+
+                    {% for paper in category.papers %}
+                        {{ paper_card(paper) }}
+                    {% endfor %}
+
+                </div>
+            {% endif %}
+        {% endfor %}
     {% endif %}
 
     {% if query %}
@@ -123,104 +246,7 @@
             <h2>Results ({{ papers|length }})</h2>
 
             {% for paper in papers %}
-
-                <div class="paper-card">
-
-                    <div class="paper-card-summary">
-
-                        <h3>{{ paper.title }}</h3>
-
-                        {% if paper.doi %}
-                            <a class="badge badge-verified" href="{{ paper.doi }}" target="_blank">Verified &middot; DOI</a>
-                        {% else %}
-                            <span class="badge badge-verified">Verified</span>
-                        {% endif %}
-
-                        <p class="paper-info">
-                            <strong>Authors:</strong>
-
-                            {% if paper.authors %}
-                                {% for author in paper.authors[:3] %}
-                                    {% if author.id %}
-                                        <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
-                                    {% else %}
-                                        {{ author.name }}
-                                    {% endif %}{% if not loop.last %}, {% endif %}
-                                {% endfor %}
-                            {% else %}
-                                Unknown
-                            {% endif %}
-
-                        </p>
-
-                        {% if paper.rank_reason %}
-                            <p class="paper-info rank-reason">
-                                {{ paper.rank_reason }}
-                            </p>
-                        {% endif %}
-
-                        {% if current_document and paper.already_added %}
-                            <button type="button" class="btn-small btn-disabled" disabled>Already added</button>
-                        {% elif current_document %}
-                            <form method="POST" action="{{ url_for('add_citation', doc_id=current_document.id) }}" class="add-to-doc-form">
-                                <input type="hidden" name="title" value="{{ paper.title }}">
-                                <input type="hidden" name="authors" value="{{ paper.authors[:3]|map(attribute='name')|join(', ') if paper.authors else 'Unknown' }}">
-                                <input type="hidden" name="year" value="{{ paper.year or '' }}">
-                                <input type="hidden" name="journal" value="{{ paper.journal or '' }}">
-                                <input type="hidden" name="doi" value="{{ paper.doi or '' }}">
-                                <input type="hidden" name="paper_id" value="{{ paper.id or '' }}">
-                                <button type="submit" class="btn-small">+ Add to "{{ current_document.title }}"</button>
-                            </form>
-                        {% elif current_user.is_authenticated %}
-                            <p class="paper-info add-to-doc-prompt">
-                                <a href="{{ url_for('documents') }}">Create a document</a> to start saving citations.
-                            </p>
-                        {% else %}
-                            <p class="paper-info add-to-doc-prompt">
-                                <a href="{{ url_for('login') }}">Log in</a> to save citations to a document.
-                            </p>
-                        {% endif %}
-
-                    </div>
-
-                    <div class="paper-card-details">
-                        <div class="paper-card-details-inner">
-
-                            <p class="paper-info">
-                                <strong>Year:</strong>
-                                {{ paper.year or "Unknown" }}
-                            </p>
-
-                            <p class="paper-info">
-                                <strong>Journal:</strong>
-                                {{ paper.journal }}
-                            </p>
-
-                            {% if paper.abstract %}
-                                <p class="paper-info">
-                                    <strong>Abstract:</strong>
-                                    {{ paper.abstract|truncate(300) }}
-                                </p>
-                            {% endif %}
-
-                            <p class="paper-info">
-                                <strong>Citations:</strong>
-                                {{ paper.citations }}
-                            </p>
-
-                            {% if paper.doi %}
-                                <p class="paper-info">
-                                    <a href="{{ paper.doi }}" target="_blank">
-                                        Open Paper
-                                    </a>
-                                </p>
-                            {% endif %}
-
-                        </div>
-                    </div>
-
-                </div>
-
+                {{ paper_card(paper) }}
             {% endfor %}
 
         {% endif %}

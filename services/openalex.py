@@ -1,5 +1,5 @@
 import socket
-from datetime import datetime
+from datetime import date, datetime, timedelta
 from statistics import median
 
 import requests
@@ -109,6 +109,7 @@ def _extract_paper(raw):
         "title": raw.get("title") or "Untitled",
         "authors": authors,
         "year": raw.get("publication_year"),
+        "publication_date": raw.get("publication_date"),
         "journal": source.get("display_name") or "Unknown",
         "abstract": _reconstruct_abstract(raw.get("abstract_inverted_index")),
         "citations": raw.get("cited_by_count", 0),
@@ -139,6 +140,52 @@ def search_papers(query, per_page=25):
         paper["rank_reason"] = _rank_reason(paper, current_year, median_citations)
 
     return papers
+
+
+def _citation_velocity(paper, today):
+    """Citations per day since publication — favors papers that are
+    picking up citations fast over ones that are merely old and well-cited,
+    so a home feed built from this surfaces what's hot right now rather
+    than the same handful of decade-old classics every time."""
+    pub_date = None
+    if paper.get("publication_date"):
+        try:
+            pub_date = datetime.strptime(paper["publication_date"], "%Y-%m-%d").date()
+        except ValueError:
+            pub_date = None
+
+    if pub_date is None:
+        # Full publication_date is missing surprisingly often; fall back
+        # to a mid-year estimate from the publication year alone.
+        pub_date = date(paper["year"], 7, 1) if paper.get("year") else today
+
+    days_since_published = max((today - pub_date).days, 1)
+    return paper["citations"] / days_since_published
+
+
+def get_trending_papers(query, per_page=25, limit=5, days_window=365):
+    """Recently-published papers matching `query`, ranked by citation
+    velocity rather than raw citation count (see _citation_velocity)."""
+    cutoff = (datetime.now().date() - timedelta(days=days_window)).isoformat()
+    response = requests.get(
+        WORKS_URL,
+        params={
+            "search": query,
+            "filter": f"from_publication_date:{cutoff}",
+            "sort": "cited_by_count:desc",
+            "per-page": per_page,
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+
+    results = response.json().get("results", [])
+    papers = [_extract_paper(raw) for raw in results]
+
+    today = datetime.now().date()
+    papers.sort(key=lambda p: _citation_velocity(p, today), reverse=True)
+
+    return papers[:limit]
 
 
 def _fetch_related_papers(work_ids):
