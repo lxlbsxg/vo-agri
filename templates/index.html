@@ -153,6 +153,25 @@
                             </p>
                         {% endif %}
 
+                        {% if current_document %}
+                            <form method="POST" action="{{ url_for('add_citation', doc_id=current_document.id) }}" class="add-to-doc-form">
+                                <input type="hidden" name="title" value="{{ paper.title }}">
+                                <input type="hidden" name="authors" value="{{ paper.authors[:3]|map(attribute='name')|join(', ') if paper.authors else 'Unknown' }}">
+                                <input type="hidden" name="year" value="{{ paper.year or '' }}">
+                                <input type="hidden" name="journal" value="{{ paper.journal or '' }}">
+                                <input type="hidden" name="doi" value="{{ paper.doi or '' }}">
+                                <button type="submit" class="btn-small">+ Add to "{{ current_document.title }}"</button>
+                            </form>
+                        {% elif current_user.is_authenticated %}
+                            <p class="paper-info add-to-doc-prompt">
+                                <a href="{{ url_for('documents') }}">Create a document</a> to start saving citations.
+                            </p>
+                        {% else %}
+                            <p class="paper-info add-to-doc-prompt">
+                                <a href="{{ url_for('login') }}">Log in</a> to save citations to a document.
+                            </p>
+                        {% endif %}
+
                     </div>
 
                     <div class="paper-card-details">

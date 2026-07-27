@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}{{ doc.title }} - vo.agri{% endblock %}
+
+{% block content %}
+
+    <p><a href="{{ url_for('documents') }}">&larr; My documents</a></p>
+
+    <form method="POST" action="{{ url_for('save_document', doc_id=doc.id) }}" id="doc-form" class="write-form">
+
+        <input
+            type="text"
+            name="title"
+            id="doc-title"
+            class="doc-title-input"
+            value="{{ doc.title }}"
+            placeholder="Untitled document"
+        >
+
+        <div class="editor-toolbar">
+            <button type="button" data-command="bold"><strong>B</strong></button>
+            <button type="button" data-command="insertUnorderedList">&bull; List</button>
+        </div>
+
+        <div id="doc-body" class="editor-body" contenteditable="true">{{ doc.body_html|safe }}</div>
+
+        <input type="hidden" name="body_html" id="doc-body-input">
+
+        <button type="submit" id="save-btn">Save document</button>
+
+    </form>
+
+    <script>
+        document.querySelectorAll(".editor-toolbar button").forEach(function (btn) {
+            btn.addEventListener("click", function () {
+                document.execCommand(btn.dataset.command, false, null);
+                document.getElementById("doc-body").focus();
+            });
+        });
+
+        document.getElementById("doc-form").addEventListener("submit", function () {
+            document.getElementById("doc-body-input").value = document.getElementById("doc-body").innerHTML;
+        });
+    </script>
+
+{% endblock %}

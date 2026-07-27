@@ -3,7 +3,7 @@
 document.addEventListener("DOMContentLoaded", function () {
     document.querySelectorAll(".paper-card").forEach(function (card) {
         card.addEventListener("click", function (event) {
-            if (event.target.closest("a")) {
+            if (event.target.closest("a, button, form")) {
                 return;
             }
             card.classList.toggle("expanded");

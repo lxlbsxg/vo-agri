@@ -3,14 +3,15 @@ import re
 import uuid
 
 from dotenv import load_dotenv
-from flask import Flask, flash, redirect, render_template, request, url_for
+from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
+from markupsafe import escape
 from requests.exceptions import RequestException
 from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from extensions import db, login_manager
-from models import User, UploadedPaper
+from models import Document, User, UploadedPaper
 from services.openalex import (
     get_author_profile,
     normalize_author_id,
@@ -111,10 +112,65 @@ def load_user(user_id):
     return db.session.get(User, int(user_id))
 
 
+def _current_document():
+    """The document the "Add to Document" button on search cards targets.
+
+    Tracked in the session as whichever document the user most recently
+    opened or created, so it survives across searches without the user
+    having to re-pick a target document for every citation.
+    """
+    if not current_user.is_authenticated:
+        return None
+
+    doc_id = session.get("current_document_id")
+    if not doc_id:
+        return None
+
+    doc = db.session.get(Document, doc_id)
+    if doc is None or doc.user_id != current_user.id:
+        session.pop("current_document_id", None)
+        return None
+
+    return doc
+
+
+def _citation_block_html(title, authors, year, journal, doi):
+    # escape() returns a Markup, whose `+=` auto-escapes *anything* appended
+    # to it — including our own literal `<em>`/`<p>` tags. Cast each escaped
+    # piece back to plain str before splicing it into the surrounding markup
+    # so the literal tags survive.
+    safe_title = str(escape(title or "Untitled paper"))
+    citation_line = str(escape(authors or "Unknown authors"))
+    if year:
+        citation_line += f" ({str(escape(year))})."
+    if journal:
+        citation_line += f" <em>{str(escape(journal))}</em>."
+
+    link_html = ""
+    if doi:
+        safe_doi = str(escape(doi))
+        link_html = f'<p><a href="{safe_doi}" target="_blank">{safe_doi}</a></p>'
+
+    return (
+        '<blockquote class="citation-block">'
+        f"<p><strong>{safe_title}</strong></p>"
+        f"<p>{citation_line}</p>"
+        f"{link_html}"
+        "</blockquote>"
+        '<p class="citation-note">Notes: </p>'
+    )
+
+
 @app.route("/")
 def home():
     return render_template(
-        "index.html", query="", search_type="paper", papers=[], authors=[], error=None
+        "index.html",
+        query="",
+        search_type="paper",
+        papers=[],
+        authors=[],
+        error=None,
+        current_document=_current_document(),
     )
 
 
@@ -152,6 +208,7 @@ def search():
         papers=papers,
         authors=authors,
         error=error,
+        current_document=_current_document(),
     )
 
 
@@ -337,6 +394,76 @@ def upload_paper():
 
     flash("Paper uploaded.", "success")
     return redirect(url_for("profile_edit"))
+
+
+@app.route("/documents")
+@login_required
+def documents():
+    docs = (
+        Document.query.filter_by(user_id=current_user.id)
+        .order_by(Document.updated_at.desc())
+        .all()
+    )
+    return render_template("documents.html", documents=docs)
+
+
+@app.route("/write/new", methods=["POST"])
+@login_required
+def new_document():
+    doc = Document(user_id=current_user.id, title="Untitled document", body_html="")
+    db.session.add(doc)
+    db.session.commit()
+
+    session["current_document_id"] = doc.id
+    return redirect(url_for("write_document", doc_id=doc.id))
+
+
+@app.route("/write/<int:doc_id>")
+@login_required
+def write_document(doc_id):
+    doc = db.session.get(Document, doc_id)
+    if doc is None or doc.user_id != current_user.id:
+        abort(404)
+
+    session["current_document_id"] = doc.id
+    return render_template("write.html", doc=doc)
+
+
+@app.route("/write/<int:doc_id>/save", methods=["POST"])
+@login_required
+def save_document(doc_id):
+    doc = db.session.get(Document, doc_id)
+    if doc is None or doc.user_id != current_user.id:
+        abort(404)
+
+    doc.title = request.form.get("title", "").strip() or "Untitled document"
+    doc.body_html = request.form.get("body_html", "")
+    db.session.commit()
+
+    flash("Document saved.", "success")
+    return redirect(url_for("write_document", doc_id=doc.id))
+
+
+@app.route("/write/<int:doc_id>/add_citation", methods=["POST"])
+@login_required
+def add_citation(doc_id):
+    doc = db.session.get(Document, doc_id)
+    if doc is None or doc.user_id != current_user.id:
+        abort(404)
+
+    citation_html = _citation_block_html(
+        title=request.form.get("title", "").strip(),
+        authors=request.form.get("authors", "").strip(),
+        year=request.form.get("year", "").strip(),
+        journal=request.form.get("journal", "").strip(),
+        doi=request.form.get("doi", "").strip(),
+    )
+    doc.body_html = (doc.body_html or "") + citation_html
+    db.session.commit()
+
+    session["current_document_id"] = doc.id
+    flash("Citation added to your document.", "success")
+    return redirect(url_for("write_document", doc_id=doc.id))
 
 
 if __name__ == "__main__":

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}My Documents - vo.agri{% endblock %}
+
+{% block content %}
+
+    <div class="documents-header">
+        <h1>My documents</h1>
+
+        <form method="POST" action="{{ url_for('new_document') }}">
+            <button type="submit">+ New document</button>
+        </form>
+    </div>
+
+    {% if documents %}
+
+        {% for doc in documents %}
+
+            <a class="paper-card document-card" href="{{ url_for('write_document', doc_id=doc.id) }}">
+                <h3>{{ doc.title }}</h3>
+                <p class="paper-info">
+                    Last updated {{ doc.updated_at.strftime('%Y-%m-%d %H:%M') }}
+                </p>
+            </a>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>You haven't created any documents yet.</p>
+
+    {% endif %}
+
+{% endblock %}
