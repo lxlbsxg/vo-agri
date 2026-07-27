@@ -56,6 +56,38 @@ def _looks_like_pdf(file_storage):
     return header == b"%PDF-"
 
 
+def _merge_author_results(external_authors, local_users):
+    """Combine OpenAlex authors with vo.agri accounts matched by name.
+
+    Local accounts are listed first (and always shown, even if OpenAlex
+    hasn't indexed them yet or they haven't linked an OpenAlex id). When a
+    local account IS linked to one of the external results, that external
+    entry is folded into the local one instead of appearing twice, with
+    the local account's own name/institution taking priority.
+    """
+    external_by_id = {a["id"]: a for a in external_authors if a["id"]}
+
+    merged = []
+    for user in local_users:
+        match = external_by_id.get(user.openalex_author_id)
+        merged.append({
+            "id": user.openalex_author_id,
+            "name": user.name,
+            "affiliation": user.institution or (match["affiliation"] if match else "Unknown"),
+            "works_count": match["works_count"] if match else None,
+            "uploaded_count": len(user.uploaded_papers),
+            "registered": True,
+        })
+
+    linked_ids = {user.openalex_author_id for user in local_users if user.openalex_author_id}
+    for author in external_authors:
+        if author["id"] in linked_ids:
+            continue
+        merged.append({**author, "uploaded_count": None, "registered": False})
+
+    return merged
+
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -80,22 +112,20 @@ def search():
     error = None
 
     if query:
-        try:
-            if search_type == "author":
-                authors = search_authors(query)
-                found_ids = [a["id"] for a in authors if a["id"]]
-                registered_ids = set()
-                if found_ids:
-                    registered_ids = {
-                        u.openalex_author_id
-                        for u in User.query.filter(User.openalex_author_id.in_(found_ids)).all()
-                    }
-                for a in authors:
-                    a["registered"] = a["id"] in registered_ids
-            else:
+        if search_type == "author":
+            external_authors = []
+            try:
+                external_authors = search_authors(query)
+            except RequestException:
+                error = "Could not reach OpenAlex right now. Showing results from vo.agri only."
+
+            local_users = User.query.filter(User.name.ilike(f"%{query}%")).order_by(User.name).all()
+            authors = _merge_author_results(external_authors, local_users)
+        else:
+            try:
                 papers = search_papers(query)
-        except RequestException:
-            error = "Could not reach OpenAlex right now. Please try again."
+            except RequestException:
+                error = "Could not reach OpenAlex right now. Please try again."
 
     return render_template(
         "index.html",

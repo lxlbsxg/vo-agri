@@ -75,7 +75,11 @@
                 <div class="paper-card">
 
                     <h3>
-                        <a href="{{ url_for('author_profile', author_id=a.id) }}">{{ a.name }}</a>
+                        {% if a.id %}
+                            <a href="{{ url_for('author_profile', author_id=a.id) }}">{{ a.name }}</a>
+                        {% else %}
+                            {{ a.name }}
+                        {% endif %}
                         {% if a.registered %}
                             <span class="badge">Registered on vo.agri</span>
                         {% endif %}
@@ -86,10 +90,25 @@
                         {{ a.affiliation }}
                     </p>
 
-                    <p class="paper-info">
-                        <strong>Published works:</strong>
-                        {{ a.works_count }}
-                    </p>
+                    {% if a.works_count is not none %}
+                        <p class="paper-info">
+                            <strong>Published works:</strong>
+                            {{ a.works_count }}
+                        </p>
+                    {% endif %}
+
+                    {% if a.uploaded_count is not none %}
+                        <p class="paper-info">
+                            <strong>Uploaded papers:</strong>
+                            {{ a.uploaded_count }}
+                        </p>
+                    {% endif %}
+
+                    {% if a.registered and not a.id %}
+                        <p class="paper-info" style="font-style: italic; color: #777;">
+                            OpenAlex profile not linked yet.
+                        </p>
+                    {% endif %}
 
                 </div>
 
