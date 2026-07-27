@@ -286,6 +286,13 @@ button:hover, .btn:hover {
     background: #256428;
 }
 
+.btn-disabled,
+.btn-disabled:hover {
+    background: #ccc;
+    color: #666;
+    cursor: default;
+}
+
 .add-to-doc-prompt {
     margin-top: 10px;
     font-size: 13px;
@@ -317,7 +324,14 @@ button:hover, .btn:hover {
     gap: 12px;
 }
 
+.doc-title-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .doc-title-input {
+    flex: 1;
     font-size: 1.6em;
     font-weight: bold;
     padding: 8px 0;
@@ -329,6 +343,19 @@ button:hover, .btn:hover {
 .doc-title-input:focus {
     outline: none;
     border-bottom-color: #2e7d32;
+}
+
+.title-edit-icon {
+    background: none;
+    border: none;
+    color: #777;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 4px;
+}
+
+.title-edit-icon:hover {
+    color: #2e7d32;
 }
 
 .editor-toolbar {
@@ -363,11 +390,35 @@ button:hover, .btn:hover {
 }
 
 .editor-body .citation-block {
+    position: relative;
     margin: 14px 0 4px;
-    padding: 10px 16px;
+    padding: 10px 40px 10px 16px;
     border-left: 3px solid #2e7d32;
     background: #f5faf5;
     color: #333;
+}
+
+.editor-body .citation-remove {
+    position: absolute;
+    top: 6px;
+    right: 8px;
+    width: 22px;
+    height: 22px;
+    line-height: 20px;
+    text-align: center;
+    padding: 0;
+    background: white;
+    border: 1px solid #cde3cf;
+    border-radius: 50%;
+    color: #999;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.editor-body .citation-remove:hover {
+    background: #fdecea;
+    border-color: #e6b3ac;
+    color: #c0392b;
 }
 
 .editor-body .citation-note {

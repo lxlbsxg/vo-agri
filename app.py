@@ -1,6 +1,7 @@
 import os
 import re
 import uuid
+from html import unescape
 
 from dotenv import load_dotenv
 from flask import Flask, abort, flash, redirect, render_template, request, session, url_for
@@ -134,7 +135,18 @@ def _current_document():
     return doc
 
 
-def _citation_block_html(title, authors, year, journal, doi):
+CITATION_ID_RE = re.compile(r'data-paper-id="([^"]*)"')
+
+
+def _existing_citation_ids(doc):
+    """Which papers (by DOI, falling back to OpenAlex work id) are already
+    cited in this document, read back out of the saved body_html."""
+    if not doc or not doc.body_html:
+        return set()
+    return {unescape(raw_id) for raw_id in CITATION_ID_RE.findall(doc.body_html)}
+
+
+def _citation_block_html(title, authors, year, journal, doi, paper_id):
     # escape() returns a Markup, whose `+=` auto-escapes *anything* appended
     # to it — including our own literal `<em>`/`<p>` tags. Cast each escaped
     # piece back to plain str before splicing it into the surrounding markup
@@ -151,8 +163,12 @@ def _citation_block_html(title, authors, year, journal, doi):
         safe_doi = str(escape(doi))
         link_html = f'<p><a href="{safe_doi}" target="_blank">{safe_doi}</a></p>'
 
+    identifier = doi or paper_id
+    id_attr = f' data-paper-id="{str(escape(identifier))}"' if identifier else ""
+
     return (
-        '<blockquote class="citation-block">'
+        f'<blockquote class="citation-block"{id_attr}>'
+        '<button type="button" class="citation-remove" contenteditable="false" title="Remove citation">&times;</button>'
         f"<p><strong>{safe_title}</strong></p>"
         f"<p>{citation_line}</p>"
         f"{link_html}"
@@ -201,6 +217,12 @@ def search():
             except RequestException:
                 error = "Could not reach OpenAlex right now. Please try again."
 
+    current_document = _current_document()
+    existing_citation_ids = _existing_citation_ids(current_document)
+    for paper in papers:
+        identifier = paper.get("doi") or paper.get("id")
+        paper["already_added"] = bool(identifier) and identifier in existing_citation_ids
+
     return render_template(
         "index.html",
         query=query,
@@ -208,7 +230,7 @@ def search():
         papers=papers,
         authors=authors,
         error=error,
-        current_document=_current_document(),
+        current_document=current_document,
     )
 
 
@@ -451,12 +473,21 @@ def add_citation(doc_id):
     if doc is None or doc.user_id != current_user.id:
         abort(404)
 
+    doi = request.form.get("doi", "").strip()
+    paper_id = request.form.get("paper_id", "").strip()
+    identifier = doi or paper_id
+
+    if identifier and identifier in _existing_citation_ids(doc):
+        flash("That paper is already in this document.", "error")
+        return redirect(url_for("write_document", doc_id=doc.id))
+
     citation_html = _citation_block_html(
         title=request.form.get("title", "").strip(),
         authors=request.form.get("authors", "").strip(),
         year=request.form.get("year", "").strip(),
         journal=request.form.get("journal", "").strip(),
-        doi=request.form.get("doi", "").strip(),
+        doi=doi,
+        paper_id=paper_id,
     )
     doc.body_html = (doc.body_html or "") + citation_html
     db.session.commit()

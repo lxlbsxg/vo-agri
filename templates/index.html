@@ -153,13 +153,16 @@
                             </p>
                         {% endif %}
 
-                        {% if current_document %}
+                        {% if current_document and paper.already_added %}
+                            <button type="button" class="btn-small btn-disabled" disabled>Already added</button>
+                        {% elif current_document %}
                             <form method="POST" action="{{ url_for('add_citation', doc_id=current_document.id) }}" class="add-to-doc-form">
                                 <input type="hidden" name="title" value="{{ paper.title }}">
                                 <input type="hidden" name="authors" value="{{ paper.authors[:3]|map(attribute='name')|join(', ') if paper.authors else 'Unknown' }}">
                                 <input type="hidden" name="year" value="{{ paper.year or '' }}">
                                 <input type="hidden" name="journal" value="{{ paper.journal or '' }}">
                                 <input type="hidden" name="doi" value="{{ paper.doi or '' }}">
+                                <input type="hidden" name="paper_id" value="{{ paper.id or '' }}">
                                 <button type="submit" class="btn-small">+ Add to "{{ current_document.title }}"</button>
                             </form>
                         {% elif current_user.is_authenticated %}

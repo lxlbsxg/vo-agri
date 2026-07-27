@@ -105,6 +105,7 @@ def _extract_paper(raw):
     source = (raw.get("primary_location") or {}).get("source") or {}
 
     return {
+        "id": _short_id(raw.get("id")),
         "title": raw.get("title") or "Untitled",
         "authors": authors,
         "year": raw.get("publication_year"),

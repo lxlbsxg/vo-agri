@@ -8,14 +8,17 @@
 
     <form method="POST" action="{{ url_for('save_document', doc_id=doc.id) }}" id="doc-form" class="write-form">
 
-        <input
-            type="text"
-            name="title"
-            id="doc-title"
-            class="doc-title-input"
-            value="{{ doc.title }}"
-            placeholder="Untitled document"
-        >
+        <div class="doc-title-row">
+            <input
+                type="text"
+                name="title"
+                id="doc-title"
+                class="doc-title-input"
+                value="{{ doc.title }}"
+                placeholder="Untitled document"
+            >
+            <button type="button" id="doc-title-edit" class="title-edit-icon" title="Rename document">&#9998;</button>
+        </div>
 
         <div class="editor-toolbar">
             <button type="button" data-command="bold"><strong>B</strong></button>
@@ -36,6 +39,32 @@
                 document.execCommand(btn.dataset.command, false, null);
                 document.getElementById("doc-body").focus();
             });
+        });
+
+        document.getElementById("doc-title-edit").addEventListener("click", function () {
+            var title = document.getElementById("doc-title");
+            title.focus();
+            title.select();
+        });
+
+        // Citation blocks carry their own remove button (contenteditable="false"
+        // so it stays a real button rather than editable text). Removal only
+        // needs to update the DOM here — it's persisted like any other edit,
+        // when the user hits Save.
+        document.getElementById("doc-body").addEventListener("click", function (event) {
+            var removeBtn = event.target.closest(".citation-remove");
+            if (!removeBtn) {
+                return;
+            }
+            var block = removeBtn.closest(".citation-block");
+            if (!block) {
+                return;
+            }
+            var note = block.nextElementSibling;
+            if (note && note.classList.contains("citation-note")) {
+                note.remove();
+            }
+            block.remove();
         });
 
         document.getElementById("doc-form").addEventListener("submit", function () {
