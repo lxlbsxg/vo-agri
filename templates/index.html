@@ -22,10 +22,10 @@
                 <span class="badge badge-verified">Verified</span>
             {% endif %}
 
-            <p class="paper-info">
-                <strong>Authors:</strong>
+            {% if paper.authors %}
+                <p class="paper-info">
+                    <strong>Authors:</strong>
 
-                {% if paper.authors %}
                     {% for author in paper.authors[:3] %}
                         {% if author.id %}
                             <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
@@ -33,11 +33,9 @@
                             {{ author.name }}
                         {% endif %}{% if not loop.last %}, {% endif %}
                     {% endfor %}
-                {% else %}
-                    Unknown
-                {% endif %}
 
-            </p>
+                </p>
+            {% endif %}
 
             {% if paper.rank_reason %}
                 <p class="paper-info rank-reason">
