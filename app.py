@@ -27,9 +27,27 @@ MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads", "papers")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+SECRET_KEY = os.environ.get("SECRET_KEY")
+if not SECRET_KEY:
+    raise RuntimeError(
+        "SECRET_KEY environment variable is not set. Copy .env.example to "
+        ".env and fill in a real value locally, or set it in your host's "
+        "environment variable settings in production."
+    )
+
+# Defaults to a local SQLite file for dev. Set DATABASE_URL in production
+# to point at a persistent database instead — see .env.example for why
+# this matters on hosts with an ephemeral filesystem (e.g. Render's free
+# tier), where the SQLite file would otherwise be wiped on every deploy.
+DATABASE_URL = os.environ.get("DATABASE_URL") or f"sqlite:///{os.path.join(BASE_DIR, 'vo_agri.db')}"
+if DATABASE_URL.startswith("postgres://"):
+    # SQLAlchemy 1.4+ requires the "postgresql://" scheme, but some hosts
+    # (Render, Heroku) hand out connection strings using the old "postgres://".
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-change-me")
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(BASE_DIR, 'vo_agri.db')}"
+app.config["SECRET_KEY"] = SECRET_KEY
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
 
@@ -322,4 +340,6 @@ def upload_paper():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    # Only used for local development (`python app.py`) — production runs
+    # via gunicorn per the Procfile, which never executes this block.
+    app.run(debug=os.environ.get("FLASK_DEBUG") == "1")
