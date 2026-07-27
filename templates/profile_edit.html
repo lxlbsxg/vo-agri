@@ -78,6 +78,16 @@
             <p class="form-hint">Provide either a PDF file or a link, not both.</p>
         </div>
 
+        <div class="form-field confirm-original-field">
+            <label>
+                <input type="checkbox" id="confirm_original" name="confirm_original" required>
+                <span>
+                    I confirm this is my original content and authorize its display on vo.agri.
+                    I retain authorship credit for this work.
+                </span>
+            </label>
+        </div>
+
         <button type="submit">Upload paper</button>
 
     </form>
@@ -91,6 +101,8 @@
             <div class="paper-card">
 
                 <h3>{{ paper.title }}</h3>
+
+                <span class="badge badge-user-submitted">User-submitted, not peer-reviewed</span>
 
                 <p class="paper-info">
                     <strong>Year:</strong>

@@ -372,6 +372,7 @@ def upload_paper():
     year_raw = request.form.get("year", "").strip()
     external_url = request.form.get("external_url", "").strip()
     pdf_file = request.files.get("pdf_file")
+    confirmed_original = request.form.get("confirm_original") == "on"
 
     has_file = pdf_file is not None and pdf_file.filename != ""
     has_url = bool(external_url)
@@ -391,6 +392,8 @@ def upload_paper():
         error = "Only PDF files are allowed."
     elif has_file and not _looks_like_pdf(pdf_file):
         error = "That file doesn't look like a valid PDF."
+    elif not confirmed_original:
+        error = "You must confirm this is your original content before uploading."
 
     if error:
         flash(error, "error")
@@ -410,6 +413,7 @@ def upload_paper():
         year=int(year_raw) if year_raw else None,
         pdf_filename=pdf_filename,
         external_url=external_url or None,
+        confirmed_original_content=True,
     )
     db.session.add(paper)
     db.session.commit()

@@ -130,6 +130,12 @@
 
                         <h3>{{ paper.title }}</h3>
 
+                        {% if paper.doi %}
+                            <a class="badge badge-verified" href="{{ paper.doi }}" target="_blank">Verified &middot; DOI</a>
+                        {% else %}
+                            <span class="badge badge-verified">Verified</span>
+                        {% endif %}
+
                         <p class="paper-info">
                             <strong>Authors:</strong>
 

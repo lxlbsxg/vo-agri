@@ -37,6 +37,13 @@ class Document(db.Model):
 
 
 class UploadedPaper(db.Model):
+    """A "user_posts" row: original content a user submitted directly,
+    distinct from "verified_papers" (OpenAlex-sourced, DOI-backed works,
+    which are fetched live and never stored locally). Always render this
+    content with the "User-submitted, not peer-reviewed" badge, never the
+    "Verified" one.
+    """
+
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
     title = db.Column(db.String(500), nullable=False)
@@ -45,6 +52,10 @@ class UploadedPaper(db.Model):
     year = db.Column(db.Integer)
     pdf_filename = db.Column(db.String(255))
     external_url = db.Column(db.String(1000))
+    # Recorded proof that the uploader checked the originality/rights
+    # confirmation at submission time — part of the creator-rights
+    # protection mechanism, not just a UI nag.
+    confirmed_original_content = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship(

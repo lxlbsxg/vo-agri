@@ -147,6 +147,7 @@ def _extract_work_summary(raw):
         "title": raw.get("title") or "Untitled",
         "year": raw.get("publication_year"),
         "journal": source.get("display_name") or "Unknown",
+        "doi": raw.get("doi"),
     }
 
 

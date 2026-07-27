@@ -53,6 +53,12 @@
 
                     <h3>{{ work.title }}</h3>
 
+                    {% if work.doi %}
+                        <a class="badge badge-verified" href="{{ work.doi }}" target="_blank">Verified &middot; DOI</a>
+                    {% else %}
+                        <span class="badge badge-verified">Verified</span>
+                    {% endif %}
+
                     <p class="paper-info">
                         <strong>Year:</strong>
                         {{ work.year or "Unknown" }}
@@ -81,6 +87,13 @@
                 <div class="paper-card">
 
                     <h3>{{ paper.title }}</h3>
+
+                    <span class="badge badge-user-submitted">User-submitted, not peer-reviewed</span>
+
+                    <p class="paper-info author-byline">
+                        <strong>By:</strong>
+                        <a href="{{ url_for('author_profile', author_id=professor.openalex_author_id) }}">{{ professor.name }}</a>
+                    </p>
 
                     <p class="paper-info">
                         <strong>Year:</strong>

@@ -138,7 +138,7 @@ a:hover {
     font-weight: bold;
 }
 
-/* "Registered on vo.agri" badge */
+/* "Registered on vo.agri" badge, and content-source badges below */
 .badge {
     display: inline-block;
     font-size: 11px;
@@ -150,6 +150,34 @@ a:hover {
     border: 1px solid #cde3cf;
     vertical-align: middle;
     margin-left: 8px;
+}
+
+a.badge:hover {
+    text-decoration: none;
+}
+
+/* Content classification: OpenAlex-sourced, DOI-backed papers */
+.badge-verified {
+    margin-left: 0;
+    margin-bottom: 8px;
+}
+
+/* Content classification: user-submitted, not peer-reviewed */
+.badge-user-submitted {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #fff8e1;
+    color: #8a6d00;
+    border: 1px solid #f0dfa1;
+    vertical-align: middle;
+    margin: 0 0 8px;
+}
+
+.author-byline {
+    font-weight: bold;
 }
 
 button, .btn {
@@ -472,6 +500,28 @@ button:hover, .btn:hover {
     font-size: 12px;
     color: #777;
     margin-top: 4px;
+}
+
+.confirm-original-field label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-weight: normal;
+    font-size: 13px;
+    color: #444;
+}
+
+.confirm-original-field input[type="checkbox"] {
+    width: auto;
+    padding: 0;
+    border: none;
+    margin-top: 3px;
+    flex-shrink: 0;
+}
+
+.confirm-original-field label span {
+    flex: 1;
+    min-width: 0;
 }
 
 .form-card button {
