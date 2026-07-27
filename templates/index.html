@@ -126,66 +126,70 @@
 
                 <div class="paper-card">
 
-                    <h3>{{ paper.title }}</h3>
+                    <div class="paper-card-summary">
 
-                    <p class="paper-info">
-                        <strong>Year:</strong>
-                        {{ paper.year or "Unknown" }}
-                    </p>
+                        <h3>{{ paper.title }}</h3>
 
-                    <p class="paper-info">
-                        <strong>Journal:</strong>
-                        {{ paper.journal }}
-                    </p>
+                        <p class="paper-info">
+                            <strong>Authors:</strong>
 
-                    <p class="paper-info">
-                        <strong>Authors:</strong>
+                            {% if paper.authors %}
+                                {% for author in paper.authors[:3] %}
+                                    {% if author.id %}
+                                        <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
+                                    {% else %}
+                                        {{ author.name }}
+                                    {% endif %}{% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            {% else %}
+                                Unknown
+                            {% endif %}
 
-                        {% if paper.authors %}
-                            {% for author in paper.authors[:3] %}
-                                {% if author.id %}
-                                    <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
-                                {% else %}
-                                    {{ author.name }}
-                                {% endif %}{% if not loop.last %}, {% endif %}
-                            {% endfor %}
-                        {% else %}
-                            Unknown
+                        </p>
+
+                        {% if paper.rank_reason %}
+                            <p class="paper-info rank-reason">
+                                {{ paper.rank_reason }}
+                            </p>
                         {% endif %}
 
-                    </p>
+                    </div>
 
-                    {% if paper.abstract %}
-                        <p class="paper-info">
-                            <strong>Abstract:</strong>
-                            {{ paper.abstract|truncate(300) }}
-                        </p>
-                    {% endif %}
+                    <div class="paper-card-details">
+                        <div class="paper-card-details-inner">
 
-                    <p class="paper-info">
-                        <strong>Citations:</strong>
-                        {{ paper.citations }}
-                    </p>
+                            <p class="paper-info">
+                                <strong>Year:</strong>
+                                {{ paper.year or "Unknown" }}
+                            </p>
 
-                    {% if paper.rank_reason %}
-                        <p class="paper-info" style="font-style: italic; color: #777;">
-                            {{ paper.rank_reason }}
-                        </p>
-                    {% endif %}
+                            <p class="paper-info">
+                                <strong>Journal:</strong>
+                                {{ paper.journal }}
+                            </p>
 
-                    {% if paper.doi %}
+                            {% if paper.abstract %}
+                                <p class="paper-info">
+                                    <strong>Abstract:</strong>
+                                    {{ paper.abstract|truncate(300) }}
+                                </p>
+                            {% endif %}
 
-                        <p class="paper-info">
+                            <p class="paper-info">
+                                <strong>Citations:</strong>
+                                {{ paper.citations }}
+                            </p>
 
-                            <a href="{{ paper.doi }}" target="_blank">
+                            {% if paper.doi %}
+                                <p class="paper-info">
+                                    <a href="{{ paper.doi }}" target="_blank">
+                                        Open Paper
+                                    </a>
+                                </p>
+                            {% endif %}
 
-                                Open Paper
-
-                            </a>
-
-                        </p>
-
-                    {% endif %}
+                        </div>
+                    </div>
 
                 </div>
 
