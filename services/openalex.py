@@ -5,10 +5,46 @@ from statistics import median
 import requests
 import urllib3.util.connection as urllib3_cn
 
-# This environment's IPv6 routes are unreachable/very slow, and Python's
-# resolver tries them before falling back to IPv4 (unlike curl's Happy
-# Eyeballs), turning every request into a 20s+ stall. Force IPv4-only DNS.
-urllib3_cn.allowed_gai_family = lambda: socket.AF_INET
+# Some environments show IPv6 to api.openalex.org as unreachable/very
+# slow, and Python's resolver tries it before falling back to IPv4
+# (unlike curl's Happy Eyeballs) — worst case, several hanging IPv6
+# attempts each eat a full connect timeout before ever reaching a
+# working IPv4 address. But forcing IPv4 unconditionally has its own
+# failure mode: a shared/NAT'd IPv4 egress can get rate-limited even
+# while IPv6 connects fine, and that's environment-specific too.
+#
+# So: probe IPv6 reachability with a short, bounded timeout and pick a
+# resolution family accordingly, instead of hardcoding a blanket choice
+# that's wrong under either condition. Re-probed periodically rather
+# than once, since a long-running process can outlive whichever network
+# condition made the last probe result true.
+_ipv6_probe = {"usable": None, "checked_at": None}
+_IPV6_PROBE_TTL = timedelta(minutes=10)
+
+
+def _probe_ipv6(host="api.openalex.org", port=443, timeout=2):
+    try:
+        family, socktype, proto, _, sockaddr = socket.getaddrinfo(
+            host, port, socket.AF_INET6, socket.SOCK_STREAM
+        )[0]
+        with socket.socket(family, socktype, proto) as sock:
+            sock.settimeout(timeout)
+            sock.connect(sockaddr)
+        return True
+    except OSError:
+        return False
+
+
+def _allowed_gai_family():
+    now = datetime.utcnow()
+    stale = _ipv6_probe["checked_at"] is None or now - _ipv6_probe["checked_at"] > _IPV6_PROBE_TTL
+    if stale:
+        _ipv6_probe["usable"] = _probe_ipv6()
+        _ipv6_probe["checked_at"] = now
+    return socket.AF_UNSPEC if _ipv6_probe["usable"] else socket.AF_INET
+
+
+urllib3_cn.allowed_gai_family = _allowed_gai_family
 
 WORKS_URL = "https://api.openalex.org/works"
 AUTHORS_URL = "https://api.openalex.org/authors"
