@@ -150,7 +150,20 @@
                 });
             }
 
-            docBody.addEventListener("mouseup", function () {
+            // Listening on `document` (not just docBody) matters: if the drag
+            // ends even slightly outside the editor's box — easy to do with
+            // an imprecise mouse/trackpad, or just a long selection near the
+            // edge — the mouseup event fires on whatever element is under the
+            // cursor there, which never reaches a listener scoped to docBody
+            // alone. Whether the *selection* is actually inside the editor is
+            // checked separately below, independent of where the event fired.
+            document.addEventListener("mouseup", function (event) {
+                if (event.target.closest(".annotation-add-btn, .annotation-panel")) {
+                    // Ignore mouseup on our own floating button/panel — it
+                    // has its own handlers, and re-running this logic here
+                    // would immediately clear the panel it just opened.
+                    return;
+                }
                 setTimeout(function () {
                     var selection = window.getSelection();
                     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
