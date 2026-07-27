@@ -1,13 +1,257 @@
 <!DOCTYPE html>
 <html>
-<head>
-    <title>AgriFind</title>
-</head>
-<body>
-    <h1>AgriFind</h1>
-    <p>Search agricultural economics research.</p>
 
-    <input type="text" placeholder="Search papers...">
-    <button>Search</button>
+<head>
+    <title>vo.agri</title>
+
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            max-width: 900px;
+            margin: 0 auto 40px;
+            padding: 0 20px 20px;
+            background: #f5f5f5;
+            color: #222;
+        }
+
+        .hero {
+            margin: 0 -20px 30px;
+            padding: 50px 20px 40px;
+            background: linear-gradient(135deg, #2e7d32, #66bb6a);
+            color: white;
+            border-radius: 0 0 16px 16px;
+        }
+
+        .hero h1 {
+            margin: 0 0 6px;
+            font-size: 2.4em;
+        }
+
+        .hero p {
+            margin: 0;
+            opacity: 0.92;
+        }
+
+        p {
+            line-height: 1.5;
+        }
+
+        form {
+            margin: 24px 0 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            max-width: 420px;
+            padding: 10px 14px;
+            font-size: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #2e7d32;
+            box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+        }
+
+        button {
+            padding: 10px 18px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            background: #2e7d32;
+            color: white;
+            border: none;
+            border-radius: 8px;
+        }
+
+        button:hover {
+            background: #256428;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+
+        .chip-label {
+            width: 100%;
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 2px;
+        }
+
+        .chip {
+            display: inline-block;
+            padding: 6px 14px;
+            background: white;
+            border: 1px solid #cde3cf;
+            border-radius: 999px;
+            font-size: 14px;
+            color: #2e7d32;
+        }
+
+        .chip:hover {
+            background: #e8f5e9;
+            text-decoration: none;
+        }
+
+        .paper-card {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .paper-card h3 {
+            margin-top: 0;
+            margin-bottom: 15px;
+        }
+
+        .paper-info {
+            margin: 6px 0;
+            color: #444;
+        }
+
+        a {
+            color: #0066cc;
+            text-decoration: none;
+        }
+
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+
+</head>
+
+<body>
+
+    <div class="hero">
+        <h1>vo.agri</h1>
+        <p>Search agricultural economics research, ranked by recency and citations.</p>
+    </div>
+
+    <form method="GET" action="/search">
+
+        <input
+            type="text"
+            name="q"
+            placeholder="Search papers..."
+            value="{{ query }}"
+        >
+
+        <button type="submit">
+            Search
+        </button>
+
+    </form>
+
+    {% if not query %}
+        <div class="chip-row">
+            <span class="chip-label">Popular searches:</span>
+            {% for topic in ["food security", "climate adaptation agriculture", "smallholder farmers", "land tenure", "agricultural supply chains", "crop yield climate change"] %}
+                <a class="chip" href="{{ url_for('search') }}?q={{ topic|urlencode }}">{{ topic }}</a>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {% if query %}
+        <p>
+            You searched for:
+            <strong>{{ query }}</strong>
+        </p>
+    {% endif %}
+
+    {% if error %}
+        <p class="paper-info" style="color: #c00;">{{ error }}</p>
+    {% endif %}
+
+    {% if query and not papers and not error %}
+        <p>No results found.</p>
+    {% endif %}
+
+    {% if papers %}
+
+        <h2>Results ({{ papers|length }})</h2>
+
+        {% for paper in papers %}
+
+            <div class="paper-card">
+
+                <h3>{{ paper.title }}</h3>
+
+                <p class="paper-info">
+                    <strong>Year:</strong>
+                    {{ paper.year or "Unknown" }}
+                </p>
+
+                <p class="paper-info">
+                    <strong>Journal:</strong>
+                    {{ paper.journal }}
+                </p>
+
+                <p class="paper-info">
+                    <strong>Authors:</strong>
+
+                    {% if paper.authors %}
+                        {% for author in paper.authors[:3] %}
+                            {% if author.id %}
+                                <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
+                            {% else %}
+                                {{ author.name }}
+                            {% endif %}{% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                    {% else %}
+                        Unknown
+                    {% endif %}
+
+                </p>
+
+                {% if paper.abstract %}
+                    <p class="paper-info">
+                        <strong>Abstract:</strong>
+                        {{ paper.abstract|truncate(300) }}
+                    </p>
+                {% endif %}
+
+                <p class="paper-info">
+                    <strong>Citations:</strong>
+                    {{ paper.citations }}
+                </p>
+
+                {% if paper.rank_reason %}
+                    <p class="paper-info" style="font-style: italic; color: #777;">
+                        {{ paper.rank_reason }}
+                    </p>
+                {% endif %}
+
+                {% if paper.doi %}
+
+                    <p class="paper-info">
+
+                        <a href="{{ paper.doi }}" target="_blank">
+
+                            Open Paper
+
+                        </a>
+
+                    </p>
+
+                {% endif %}
+
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
 </body>
+
 </html>
