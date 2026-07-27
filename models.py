@@ -20,3 +20,20 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+
+class UploadedPaper(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    title = db.Column(db.String(500), nullable=False)
+    abstract = db.Column(db.Text)
+    journal = db.Column(db.String(255))
+    year = db.Column(db.Integer)
+    pdf_filename = db.Column(db.String(255))
+    external_url = db.Column(db.String(1000))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("uploaded_papers", order_by="UploadedPaper.year.desc()"),
+    )

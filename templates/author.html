@@ -1,56 +1,123 @@
 {% extends "base.html" %}
 
-{% block title %}{{ author.name if author else "Author" }} - vo.agri{% endblock %}
+{% block title %}{{ author.name if author else (professor.name if professor else "Author") }} - vo.agri{% endblock %}
 
 {% block content %}
 
     <p><a href="{{ url_for('home') }}">&larr; Back to search</a></p>
 
-    {% if error %}
+    {% if error and not professor %}
 
         <p class="paper-info error-text">{{ error }}</p>
 
-    {% elif author %}
+    {% elif author or professor %}
 
-        <h1>{{ author.name }}</h1>
+        <h1>{{ author.name if author else professor.name }}</h1>
 
-        <p class="paper-info">
-            <strong>Affiliation:</strong>
-            {{ author.affiliation }}
-        </p>
+        {% if author %}
+            <p class="paper-info">
+                <strong>Affiliation:</strong>
+                {{ author.affiliation }}
+            </p>
+        {% elif professor.institution %}
+            <p class="paper-info">
+                <strong>Affiliation:</strong>
+                {{ professor.institution }}
+            </p>
+        {% endif %}
 
-        {% if author.topics %}
+        {% if author and author.topics %}
             <p class="paper-info">
                 <strong>Research areas:</strong>
                 {{ author.topics|join(", ") }}
             </p>
         {% endif %}
 
-        <h2>Published Papers ({{ author.works|length }})</h2>
-
-        {% if not author.works %}
-            <p>No papers found.</p>
+        {% if error %}
+            <p class="paper-info error-text">
+                {{ error }} Showing self-uploaded papers only.
+            </p>
         {% endif %}
 
-        {% for work in author.works %}
+        {% if author %}
 
-            <div class="paper-card">
+            <h2>Published Papers ({{ author.works|length }})</h2>
 
-                <h3>{{ work.title }}</h3>
+            {% if not author.works %}
+                <p>No papers found.</p>
+            {% endif %}
 
-                <p class="paper-info">
-                    <strong>Year:</strong>
-                    {{ work.year or "Unknown" }}
-                </p>
+            {% for work in author.works %}
 
-                <p class="paper-info">
-                    <strong>Journal:</strong>
-                    {{ work.journal }}
-                </p>
+                <div class="paper-card">
 
-            </div>
+                    <h3>{{ work.title }}</h3>
 
-        {% endfor %}
+                    <p class="paper-info">
+                        <strong>Year:</strong>
+                        {{ work.year or "Unknown" }}
+                    </p>
+
+                    <p class="paper-info">
+                        <strong>Journal:</strong>
+                        {{ work.journal }}
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+        {% if uploaded_papers %}
+
+            <h2>Uploaded by {{ author.name if author else professor.name }} ({{ uploaded_papers|length }})</h2>
+            <p class="paper-info" style="font-style: italic; color: #777;">
+                Added directly by the professor — not fetched from OpenAlex.
+            </p>
+
+            {% for paper in uploaded_papers %}
+
+                <div class="paper-card">
+
+                    <h3>{{ paper.title }}</h3>
+
+                    <p class="paper-info">
+                        <strong>Year:</strong>
+                        {{ paper.year or "Unknown" }}
+                    </p>
+
+                    <p class="paper-info">
+                        <strong>Journal:</strong>
+                        {{ paper.journal or "Unknown" }}
+                    </p>
+
+                    {% if paper.abstract %}
+                        <p class="paper-info">
+                            <strong>Abstract:</strong>
+                            {{ paper.abstract|truncate(300) }}
+                        </p>
+                    {% endif %}
+
+                    {% if paper.pdf_filename %}
+                        <p class="paper-info">
+                            <a href="{{ url_for('static', filename='uploads/papers/' + paper.pdf_filename) }}" target="_blank">
+                                Download PDF
+                            </a>
+                        </p>
+                    {% elif paper.external_url %}
+                        <p class="paper-info">
+                            <a href="{{ paper.external_url }}" target="_blank">
+                                View paper
+                            </a>
+                        </p>
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
 
     {% endif %}
 

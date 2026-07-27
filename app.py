@@ -1,13 +1,16 @@
 import os
 import re
+import uuid
 
 from dotenv import load_dotenv
 from flask import Flask, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from requests.exceptions import RequestException
+from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.utils import secure_filename
 
 from extensions import db, login_manager
-from models import User
+from models import User, UploadedPaper
 from services.openalex import get_author_profile, normalize_author_id, search_papers
 
 load_dotenv()
@@ -15,16 +18,37 @@ load_dotenv()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
+UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads", "papers")
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-change-me")
 app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{os.path.join(BASE_DIR, 'vo_agri.db')}"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
 
 db.init_app(app)
 login_manager.init_app(app)
 
 with app.app_context():
     db.create_all()
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_file_too_large(_error):
+    flash("That file is too large. Maximum size is 10MB.", "error")
+    return redirect(url_for("profile_edit"))
+
+
+def _has_pdf_extension(filename):
+    return filename.lower().endswith(".pdf")
+
+
+def _looks_like_pdf(file_storage):
+    header = file_storage.stream.read(5)
+    file_storage.stream.seek(0)
+    return header == b"%PDF-"
 
 
 @login_manager.user_loader
@@ -67,7 +91,19 @@ def author_profile(author_id):
     except RequestException:
         error = "Could not reach OpenAlex right now. Please try again."
 
-    return render_template("author.html", author=author, error=error)
+    # A professor may have registered and linked their OpenAlex id to this
+    # page, in which case we also show what they've uploaded themselves,
+    # kept in a separate section from the OpenAlex-fetched list.
+    professor = User.query.filter_by(openalex_author_id=author_id).first()
+    uploaded_papers = professor.uploaded_papers if professor else []
+
+    return render_template(
+        "author.html",
+        author=author,
+        error=error,
+        professor=professor,
+        uploaded_papers=uploaded_papers,
+    )
 
 
 @app.route("/register", methods=["GET", "POST"])
@@ -172,6 +208,61 @@ def profile_edit():
         return redirect(url_for("profile_edit"))
 
     return render_template("profile_edit.html")
+
+
+@app.route("/profile/papers", methods=["POST"])
+@login_required
+def upload_paper():
+    title = request.form.get("title", "").strip()
+    abstract = request.form.get("abstract", "").strip()
+    journal = request.form.get("journal", "").strip()
+    year_raw = request.form.get("year", "").strip()
+    external_url = request.form.get("external_url", "").strip()
+    pdf_file = request.files.get("pdf_file")
+
+    has_file = pdf_file is not None and pdf_file.filename != ""
+    has_url = bool(external_url)
+
+    error = None
+    if not title:
+        error = "Title is required."
+    elif year_raw and not year_raw.isdigit():
+        error = "Year must be a number."
+    elif has_file and has_url:
+        error = "Provide either a PDF file or an external link, not both."
+    elif not has_file and not has_url:
+        error = "Provide either a PDF file or an external link."
+    elif has_url and not (external_url.startswith("http://") or external_url.startswith("https://")):
+        error = "External link must start with http:// or https://."
+    elif has_file and not _has_pdf_extension(pdf_file.filename):
+        error = "Only PDF files are allowed."
+    elif has_file and not _looks_like_pdf(pdf_file):
+        error = "That file doesn't look like a valid PDF."
+
+    if error:
+        flash(error, "error")
+        return redirect(url_for("profile_edit"))
+
+    pdf_filename = None
+    if has_file:
+        safe_name = secure_filename(pdf_file.filename)
+        pdf_filename = f"{uuid.uuid4().hex}_{safe_name}"
+        pdf_file.save(os.path.join(UPLOAD_DIR, pdf_filename))
+
+    paper = UploadedPaper(
+        user_id=current_user.id,
+        title=title,
+        abstract=abstract or None,
+        journal=journal or None,
+        year=int(year_raw) if year_raw else None,
+        pdf_filename=pdf_filename,
+        external_url=external_url or None,
+    )
+    db.session.add(paper)
+    db.session.commit()
+
+    flash("Paper uploaded.", "success")
+    return redirect(url_for("profile_edit"))
 
 
 if __name__ == "__main__":
