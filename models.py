@@ -36,6 +36,30 @@ class Document(db.Model):
     )
 
 
+class Annotation(db.Model):
+    """A note attached to a highlighted span of text in a Document's
+    body_html (the span itself — <span class="annotation-highlight"
+    data-highlight-id="..."> — lives inside body_html and is matched to
+    its annotations by highlight_id). Single-user for now (one row per
+    document+user+highlight); kept as its own table rather than embedded
+    in body_html so that sharing a document's annotations across
+    multiple users later is a query, not a migration.
+    """
+
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey("document.id"), nullable=False, index=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    highlight_id = db.Column(db.String(64), nullable=False, index=True)
+    text = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    document = db.relationship(
+        "Document",
+        backref=db.backref("annotations", order_by="Annotation.created_at"),
+    )
+    user = db.relationship("User")
+
+
 class UploadedPaper(db.Model):
     """A "user_posts" row: original content a user submitted directly,
     distinct from "verified_papers" (OpenAlex-sourced, DOI-backed works,

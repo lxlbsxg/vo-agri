@@ -1,3 +1,4 @@
+import json
 import os
 import re
 import uuid
@@ -13,7 +14,7 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from extensions import db, login_manager
-from models import Document, User, UploadedPaper
+from models import Annotation, Document, User, UploadedPaper
 from services.openalex import (
     get_author_profile,
     get_paper,
@@ -515,6 +516,18 @@ def new_document():
     return redirect(url_for("write_document", doc_id=doc.id))
 
 
+def _annotations_json_for(doc, user_id):
+    """{highlight_id: [text, ...]} for this user's annotations on doc,
+    JSON-encoded and with `</` escaped so it's safe to embed inside an
+    inline <script> block (otherwise annotation text containing that
+    substring could prematurely close the tag)."""
+    by_highlight = {}
+    annotations = Annotation.query.filter_by(document_id=doc.id, user_id=user_id).all()
+    for annotation in annotations:
+        by_highlight.setdefault(annotation.highlight_id, []).append(annotation.text)
+    return json.dumps(by_highlight).replace("</", "<\\/")
+
+
 @app.route("/write/<int:doc_id>")
 @login_required
 def write_document(doc_id):
@@ -523,7 +536,11 @@ def write_document(doc_id):
         abort(404)
 
     session["current_document_id"] = doc.id
-    return render_template("write.html", doc=doc)
+    return render_template(
+        "write.html",
+        doc=doc,
+        annotations_json=_annotations_json_for(doc, current_user.id),
+    )
 
 
 @app.route("/write/<int:doc_id>/save", methods=["POST"])
@@ -535,6 +552,26 @@ def save_document(doc_id):
 
     doc.title = request.form.get("title", "").strip() or "Untitled document"
     doc.body_html = request.form.get("body_html", "")
+
+    # Annotations are fully replaced from the client's current state each
+    # save, same as body_html itself — simpler than diffing, and it means
+    # deleting a highlighted passage naturally drops its annotation too.
+    Annotation.query.filter_by(document_id=doc.id, user_id=current_user.id).delete()
+    try:
+        annotations_data = json.loads(request.form.get("annotations_json") or "{}")
+    except ValueError:
+        annotations_data = {}
+    for highlight_id, texts in annotations_data.items():
+        for text in texts:
+            text = (text or "").strip()
+            if text:
+                db.session.add(Annotation(
+                    document_id=doc.id,
+                    user_id=current_user.id,
+                    highlight_id=str(highlight_id)[:64],
+                    text=text,
+                ))
+
     db.session.commit()
 
     flash("Document saved.", "success")

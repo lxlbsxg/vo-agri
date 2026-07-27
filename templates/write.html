@@ -28,10 +28,13 @@
         <div id="doc-body" class="editor-body" contenteditable="true">{{ doc.body_html|safe }}</div>
 
         <input type="hidden" name="body_html" id="doc-body-input">
+        <input type="hidden" name="annotations_json" id="annotations-input">
 
         <button type="submit" id="save-btn">Save document</button>
 
     </form>
+
+    <script type="application/json" id="annotations-data">{{ annotations_json|safe }}</script>
 
     <script>
         document.querySelectorAll(".editor-toolbar button").forEach(function (btn) {
@@ -67,9 +70,158 @@
             block.remove();
         });
 
-        document.getElementById("doc-form").addEventListener("submit", function () {
-            document.getElementById("doc-body-input").value = document.getElementById("doc-body").innerHTML;
-        });
+        // --- Annotations: select text -> highlight + note, saved with the document ---
+        (function () {
+            var docBody = document.getElementById("doc-body");
+            var annotationsData = JSON.parse(document.getElementById("annotations-data").textContent || "{}");
+
+            var floatingBtn = null;
+            var floatingPanel = null;
+
+            function clearFloatingUI() {
+                if (floatingBtn) { floatingBtn.remove(); floatingBtn = null; }
+                if (floatingPanel) { floatingPanel.remove(); floatingPanel = null; }
+            }
+
+            function positionNear(el, rect) {
+                el.style.position = "absolute";
+                el.style.left = (rect.left + window.scrollX) + "px";
+                el.style.top = (rect.bottom + window.scrollY + 6) + "px";
+            }
+
+            function annotationCount(highlightId) {
+                return (annotationsData[highlightId] || []).length;
+            }
+
+            function insertOrUpdateMarker(highlightSpan, highlightId) {
+                var marker = docBody.querySelector('.annotation-marker[data-highlight-id="' + highlightId + '"]');
+                if (!marker) {
+                    marker = document.createElement("sup");
+                    marker.className = "annotation-marker";
+                    marker.dataset.highlightId = highlightId;
+                    marker.contentEditable = "false";
+                    highlightSpan.after(marker);
+                }
+                marker.textContent = "💬 " + annotationCount(highlightId);
+            }
+
+            function openAnnotationPanel(range, rect) {
+                clearFloatingUI();
+
+                var highlightId = (window.crypto && crypto.randomUUID)
+                    ? crypto.randomUUID()
+                    : ("h" + Date.now() + Math.random().toString(16).slice(2));
+
+                var span = document.createElement("span");
+                span.className = "annotation-highlight";
+                span.dataset.highlightId = highlightId;
+                span.appendChild(range.extractContents());
+                range.insertNode(span);
+                window.getSelection().removeAllRanges();
+
+                floatingPanel = document.createElement("div");
+                floatingPanel.className = "annotation-panel";
+                positionNear(floatingPanel, rect);
+                floatingPanel.innerHTML =
+                    '<textarea placeholder="Add a note..."></textarea>' +
+                    '<div class="annotation-panel-actions">' +
+                    '<button type="button" class="btn-small annotation-save">Save</button>' +
+                    '<button type="button" class="btn-small btn-disabled annotation-cancel">Cancel</button>' +
+                    "</div>";
+                document.body.appendChild(floatingPanel);
+
+                var textarea = floatingPanel.querySelector("textarea");
+                textarea.focus();
+
+                floatingPanel.querySelector(".annotation-cancel").addEventListener("click", function () {
+                    var parent = span.parentNode;
+                    while (span.firstChild) parent.insertBefore(span.firstChild, span);
+                    parent.removeChild(span);
+                    clearFloatingUI();
+                });
+
+                floatingPanel.querySelector(".annotation-save").addEventListener("click", function () {
+                    var text = textarea.value.trim();
+                    if (!text) return;
+                    if (!annotationsData[highlightId]) annotationsData[highlightId] = [];
+                    annotationsData[highlightId].push(text);
+                    insertOrUpdateMarker(span, highlightId);
+                    clearFloatingUI();
+                });
+            }
+
+            docBody.addEventListener("mouseup", function () {
+                setTimeout(function () {
+                    var selection = window.getSelection();
+                    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+                        clearFloatingUI();
+                        return;
+                    }
+                    var range = selection.getRangeAt(0);
+                    if (!docBody.contains(range.commonAncestorContainer)) {
+                        clearFloatingUI();
+                        return;
+                    }
+                    clearFloatingUI();
+
+                    var rect = range.getBoundingClientRect();
+                    floatingBtn = document.createElement("button");
+                    floatingBtn.type = "button";
+                    floatingBtn.className = "btn-small annotation-add-btn";
+                    floatingBtn.textContent = "Add annotation";
+                    positionNear(floatingBtn, rect);
+                    document.body.appendChild(floatingBtn);
+
+                    var capturedRange = range.cloneRange();
+                    floatingBtn.addEventListener("mousedown", function (event) {
+                        // preventDefault keeps the browser from clearing the
+                        // selection just from clicking this button
+                        event.preventDefault();
+                        openAnnotationPanel(capturedRange, rect);
+                    });
+                }, 0);
+            });
+
+            // Marker badges for annotations already saved from a previous visit
+            Object.keys(annotationsData).forEach(function (highlightId) {
+                var span = docBody.querySelector('.annotation-highlight[data-highlight-id="' + highlightId + '"]');
+                if (span) insertOrUpdateMarker(span, highlightId);
+            });
+
+            // Click a marker to expand/collapse the notes on that highlight
+            docBody.addEventListener("click", function (event) {
+                var marker = event.target.closest(".annotation-marker");
+                if (!marker) return;
+
+                var highlightId = marker.dataset.highlightId;
+                var existing = docBody.querySelector('.annotation-expanded[data-highlight-id="' + highlightId + '"]');
+                if (existing) {
+                    existing.remove();
+                    return;
+                }
+
+                var list = document.createElement("div");
+                list.className = "annotation-expanded";
+                list.contentEditable = "false";
+                list.dataset.highlightId = highlightId;
+                (annotationsData[highlightId] || []).forEach(function (text) {
+                    var p = document.createElement("p");
+                    p.textContent = text;
+                    list.appendChild(p);
+                });
+                marker.after(list);
+            });
+
+            document.getElementById("doc-form").addEventListener("submit", function () {
+                // Expanded note panels are a transient view, not real document
+                // content — strip them from a clone before saving so old
+                // annotation text doesn't get baked into body_html itself.
+                var clone = docBody.cloneNode(true);
+                clone.querySelectorAll(".annotation-expanded").forEach(function (el) { el.remove(); });
+                document.getElementById("doc-body-input").value = clone.innerHTML;
+                document.getElementById("annotations-input").value = JSON.stringify(annotationsData);
+            });
+        })();
     </script>
 
 {% endblock %}

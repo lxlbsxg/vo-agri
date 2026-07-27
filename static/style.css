@@ -468,6 +468,65 @@ button:hover, .btn:hover {
     align-self: flex-start;
 }
 
+/* Text-selection annotations */
+.editor-body .annotation-highlight {
+    background: #fff3b0;
+}
+
+.editor-body .annotation-marker {
+    cursor: pointer;
+    font-size: 0.7em;
+    color: #8a6d00;
+    margin-left: 2px;
+    user-select: none;
+}
+
+.editor-body .annotation-expanded {
+    display: block;
+    margin: 6px 0 6px 12px;
+    padding: 8px 12px;
+    border-left: 3px solid #f0dfa1;
+    background: #fffbea;
+    font-size: 14px;
+}
+
+.editor-body .annotation-expanded p {
+    margin: 4px 0;
+}
+
+.annotation-add-btn,
+.annotation-panel {
+    z-index: 100;
+}
+
+.annotation-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 240px;
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.annotation-panel textarea {
+    width: 100%;
+    min-height: 60px;
+    padding: 6px 8px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-sizing: border-box;
+    resize: vertical;
+}
+
+.annotation-panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
 /* Auth / edit forms (register, login, profile edit) */
 .form-card {
     background: white;
