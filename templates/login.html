@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Log in - vo.agri{% endblock %}
+
+{% block content %}
+
+    <h1>Log in</h1>
+
+    <form method="POST" class="form-card">
+
+        <div class="form-field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ email }}" required>
+        </div>
+
+        <div class="form-field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+
+        <button type="submit">Log in</button>
+
+    </form>
+
+    <p>Don't have an account? <a href="{{ url_for('register') }}">Register</a></p>
+
+{% endblock %}

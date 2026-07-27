@@ -28,6 +28,18 @@ def _short_id(openalex_url):
     return openalex_url.rstrip("/").split("/")[-1]
 
 
+def normalize_author_id(value):
+    """Accepts either a short id ('A5023888391') or a full OpenAlex URL
+    (as a user might paste from their browser) and returns the short id,
+    or None if blank."""
+    if not value:
+        return None
+    value = value.strip()
+    if not value:
+        return None
+    return _short_id(value) if value.startswith("http") else value
+
+
 def _reconstruct_abstract(inverted_index):
     """OpenAlex stores abstracts as {word: [positions]} instead of plain text."""
     if not inverted_index:

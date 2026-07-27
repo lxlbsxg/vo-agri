@@ -1,63 +1,14 @@
-<!DOCTYPE html>
-<html>
+{% extends "base.html" %}
 
-<head>
-    <title>{{ author.name if author else "Author" }} - vo.agri</title>
+{% block title %}{{ author.name if author else "Author" }} - vo.agri{% endblock %}
 
-    <style>
-        body {
-            font-family: Arial, Helvetica, sans-serif;
-            max-width: 900px;
-            margin: 40px auto;
-            padding: 20px;
-            background: #f5f5f5;
-        }
-
-        h1 {
-            margin-bottom: 5px;
-        }
-
-        p {
-            line-height: 1.5;
-        }
-
-        .paper-card {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .paper-card h3 {
-            margin-top: 0;
-            margin-bottom: 15px;
-        }
-
-        .paper-info {
-            margin: 6px 0;
-            color: #444;
-        }
-
-        a {
-            color: #0066cc;
-            text-decoration: none;
-        }
-
-        a:hover {
-            text-decoration: underline;
-        }
-    </style>
-
-</head>
-
-<body>
+{% block content %}
 
     <p><a href="{{ url_for('home') }}">&larr; Back to search</a></p>
 
     {% if error %}
 
-        <p class="paper-info" style="color: #c00;">{{ error }}</p>
+        <p class="paper-info error-text">{{ error }}</p>
 
     {% elif author %}
 
@@ -103,6 +54,4 @@
 
     {% endif %}
 
-</body>
-
-</html>
+{% endblock %}

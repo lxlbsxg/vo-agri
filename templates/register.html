@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Register - vo.agri{% endblock %}
+
+{% block content %}
+
+    <h1>Create your professor account</h1>
+    <p>Register to manage the profile shown for your published research.</p>
+
+    <form method="POST" class="form-card">
+
+        <div class="form-field">
+            <label for="email">Email</label>
+            <input type="email" id="email" name="email" value="{{ form.email }}" required>
+        </div>
+
+        <div class="form-field">
+            <label for="name">Full name</label>
+            <input type="text" id="name" name="name" value="{{ form.name }}" required>
+        </div>
+
+        <div class="form-field">
+            <label for="institution">Institution</label>
+            <input type="text" id="institution" name="institution" value="{{ form.institution }}">
+        </div>
+
+        <div class="form-field">
+            <label for="openalex_author_id">OpenAlex author ID (optional)</label>
+            <input
+                type="text"
+                id="openalex_author_id"
+                name="openalex_author_id"
+                value="{{ form.openalex_author_id }}"
+                placeholder="e.g. A5023888391"
+            >
+            <p class="form-hint">
+                Links your account to your existing publications. Find yours by
+                searching <a href="{{ url_for('home') }}">vo.agri</a> and opening
+                your author page — leave blank if unsure, you can add it later.
+            </p>
+        </div>
+
+        <div class="form-field">
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" minlength="8" required>
+        </div>
+
+        <div class="form-field">
+            <label for="confirm_password">Confirm password</label>
+            <input type="password" id="confirm_password" name="confirm_password" minlength="8" required>
+        </div>
+
+        <button type="submit">Register</button>
+
+    </form>
+
+    <p>Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+
+{% endblock %}

@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile - vo.agri{% endblock %}
+
+{% block content %}
+
+    <h1>My profile</h1>
+    <p class="paper-info"><strong>Email:</strong> {{ current_user.email }}</p>
+
+    <form method="POST" class="form-card">
+
+        <div class="form-field">
+            <label for="name">Full name</label>
+            <input type="text" id="name" name="name" value="{{ current_user.name }}" required>
+        </div>
+
+        <div class="form-field">
+            <label for="institution">Institution</label>
+            <input type="text" id="institution" name="institution" value="{{ current_user.institution or '' }}">
+        </div>
+
+        <div class="form-field">
+            <label for="openalex_author_id">OpenAlex author ID</label>
+            <input
+                type="text"
+                id="openalex_author_id"
+                name="openalex_author_id"
+                value="{{ current_user.openalex_author_id or '' }}"
+                placeholder="e.g. A5023888391"
+            >
+            <p class="form-hint">Links this account to your public OpenAlex publication record.</p>
+        </div>
+
+        <button type="submit">Save changes</button>
+
+    </form>
+
+    {% if current_user.openalex_author_id %}
+        <p>
+            <a href="{{ url_for('author_profile', author_id=current_user.openalex_author_id) }}">
+                View my public profile &rarr;
+            </a>
+        </p>
+    {% endif %}
+
+{% endblock %}

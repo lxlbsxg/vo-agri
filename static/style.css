@@ -1,0 +1,222 @@
+body {
+    font-family: Arial, Helvetica, sans-serif;
+    max-width: 900px;
+    margin: 0 auto 40px;
+    padding: 0 20px 20px;
+    background: #f5f5f5;
+    color: #222;
+}
+
+h1 {
+    margin-bottom: 5px;
+}
+
+p {
+    line-height: 1.5;
+}
+
+a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+/* Top nav */
+.topnav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 0;
+}
+
+.topnav .brand {
+    font-weight: bold;
+    font-size: 1.2em;
+    color: #2e7d32;
+}
+
+.nav-links a {
+    margin-left: 16px;
+    color: #444;
+}
+
+/* Flash messages */
+.flash-messages {
+    margin-bottom: 16px;
+}
+
+.flash {
+    padding: 10px 14px;
+    border-radius: 8px;
+    margin: 0 0 8px;
+}
+
+.flash-error {
+    background: #fdecea;
+    color: #c0392b;
+}
+
+.flash-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* Hero (home page) */
+.hero {
+    margin: 0 -20px 30px;
+    padding: 50px 20px 40px;
+    background: linear-gradient(135deg, #2e7d32, #66bb6a);
+    color: white;
+    border-radius: 0 0 16px 16px;
+}
+
+.hero h1 {
+    margin: 0 0 6px;
+    font-size: 2.4em;
+}
+
+.hero p {
+    margin: 0;
+    opacity: 0.92;
+}
+
+/* Search form (home page) */
+.search-form {
+    margin: 24px 0 10px;
+    display: flex;
+    gap: 10px;
+}
+
+.search-form input[type="text"] {
+    flex: 1;
+    max-width: 420px;
+    padding: 10px 14px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+}
+
+.search-form input[type="text"]:focus {
+    outline: none;
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+button, .btn {
+    padding: 10px 18px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #2e7d32;
+    color: white;
+    border: none;
+    border-radius: 8px;
+}
+
+button:hover, .btn:hover {
+    background: #256428;
+    text-decoration: none;
+}
+
+/* Popular search chips */
+.chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 30px;
+}
+
+.chip-label {
+    width: 100%;
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 2px;
+}
+
+.chip {
+    display: inline-block;
+    padding: 6px 14px;
+    background: white;
+    border: 1px solid #cde3cf;
+    border-radius: 999px;
+    font-size: 14px;
+    color: #2e7d32;
+}
+
+.chip:hover {
+    background: #e8f5e9;
+    text-decoration: none;
+}
+
+/* Paper / result cards */
+.paper-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.paper-card h3 {
+    margin-top: 0;
+    margin-bottom: 15px;
+}
+
+.paper-info {
+    margin: 6px 0;
+    color: #444;
+}
+
+.error-text {
+    color: #c00;
+}
+
+/* Auth / edit forms (register, login, profile edit) */
+.form-card {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 30px;
+    max-width: 420px;
+    margin: 20px 0;
+}
+
+.form-field {
+    margin-bottom: 16px;
+}
+
+.form-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+}
+
+.form-field input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.form-field input:focus {
+    outline: none;
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+.form-hint {
+    font-size: 12px;
+    color: #777;
+    margin-top: 4px;
+}
+
+.form-card button {
+    width: 100%;
+}
