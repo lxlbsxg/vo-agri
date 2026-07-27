@@ -141,9 +141,39 @@ def search_papers(query, per_page=25):
     return papers
 
 
+def _fetch_related_papers(work_ids):
+    """Best-effort lookup of a handful of related works by id.
+
+    related_works only gives OpenAlex ids, not titles/years, so each one
+    needs its own fetch. If one fails (bad id, transient error) skip it
+    rather than let a "related papers" sidebar take down the whole page.
+    """
+    related = []
+    for work_id in work_ids:
+        try:
+            response = requests.get(f"{WORKS_URL}/{work_id}", timeout=20)
+            response.raise_for_status()
+        except requests.RequestException:
+            continue
+        related.append(_extract_work_summary(response.json()))
+    return related
+
+
+def get_paper(work_id, related_count=5):
+    response = requests.get(f"{WORKS_URL}/{work_id}", timeout=20)
+    response.raise_for_status()
+    raw = response.json()
+
+    paper = _extract_paper(raw)
+    related_ids = [_short_id(url) for url in (raw.get("related_works") or [])][:related_count]
+    paper["related"] = _fetch_related_papers(related_ids)
+    return paper
+
+
 def _extract_work_summary(raw):
     source = (raw.get("primary_location") or {}).get("source") or {}
     return {
+        "id": _short_id(raw.get("id")),
         "title": raw.get("title") or "Untitled",
         "year": raw.get("publication_year"),
         "journal": source.get("display_name") or "Unknown",

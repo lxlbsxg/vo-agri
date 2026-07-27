@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+
+{% block title %}{{ paper.title if paper else "Paper" }} - vo.agri{% endblock %}
+
+{% block content %}
+
+    <p><a href="{{ url_for('home') }}">&larr; Back to search</a></p>
+
+    {% if error and not paper %}
+
+        <p class="paper-info error-text">{{ error }}</p>
+
+    {% elif paper %}
+
+        <h1>{{ paper.title }}</h1>
+
+        {% if paper.doi %}
+            <a class="badge badge-verified" href="{{ paper.doi }}" target="_blank">Verified &middot; DOI</a>
+        {% else %}
+            <span class="badge badge-verified">Verified</span>
+        {% endif %}
+
+        {% if error %}
+            <p class="paper-info error-text">{{ error }}</p>
+        {% endif %}
+
+        <p class="paper-info">
+            <strong>Authors:</strong>
+
+            {% if paper.authors %}
+                {% for author in paper.authors %}
+                    {% if author.id %}
+                        <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
+                    {% else %}
+                        {{ author.name }}
+                    {% endif %}{% if not loop.last %}, {% endif %}
+                {% endfor %}
+            {% else %}
+                Unknown
+            {% endif %}
+
+        </p>
+
+        <p class="paper-info">
+            <strong>Year:</strong>
+            {{ paper.year or "Unknown" }}
+        </p>
+
+        <p class="paper-info">
+            <strong>Journal:</strong>
+            {{ paper.journal }}
+        </p>
+
+        {% if paper.abstract %}
+            <p class="paper-info">
+                <strong>Abstract:</strong>
+                {{ paper.abstract }}
+            </p>
+        {% endif %}
+
+        <p class="paper-info">
+            <strong>Citations:</strong>
+            {{ paper.citations }}
+        </p>
+
+        {% if paper.doi %}
+            <p class="paper-info">
+                <a href="{{ paper.doi }}" target="_blank">Open Paper</a>
+            </p>
+        {% endif %}
+
+        {% if paper.related %}
+
+            <h2>Related Papers</h2>
+
+            {% for related in paper.related %}
+
+                <div class="paper-card">
+
+                    <h3>
+                        {% if related.id %}
+                            <a href="{{ url_for('paper_detail', work_id=related.id) }}">{{ related.title }}</a>
+                        {% else %}
+                            {{ related.title }}
+                        {% endif %}
+                    </h3>
+
+                    {% if related.doi %}
+                        <a class="badge badge-verified" href="{{ related.doi }}" target="_blank">Verified &middot; DOI</a>
+                    {% else %}
+                        <span class="badge badge-verified">Verified</span>
+                    {% endif %}
+
+                    <p class="paper-info">
+                        <strong>Year:</strong>
+                        {{ related.year or "Unknown" }}
+                    </p>
+
+                    <p class="paper-info">
+                        <strong>Journal:</strong>
+                        {{ related.journal }}
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% else %}
+
+        <p>Paper not found.</p>
+
+    {% endif %}
+
+{% endblock %}

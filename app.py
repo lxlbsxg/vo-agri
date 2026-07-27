@@ -15,6 +15,7 @@ from extensions import db, login_manager
 from models import Document, User, UploadedPaper
 from services.openalex import (
     get_author_profile,
+    get_paper,
     normalize_author_id,
     search_authors,
     search_papers,
@@ -257,6 +258,19 @@ def author_profile(author_id):
         professor=professor,
         uploaded_papers=uploaded_papers,
     )
+
+
+@app.route("/paper/<work_id>")
+def paper_detail(work_id):
+    paper = None
+    error = None
+
+    try:
+        paper = get_paper(work_id)
+    except RequestException:
+        error = "Could not reach OpenAlex right now. Please try again."
+
+    return render_template("paper.html", paper=paper, error=error)
 
 
 @app.route("/register", methods=["GET", "POST"])

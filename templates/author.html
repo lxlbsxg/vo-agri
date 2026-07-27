@@ -51,7 +51,13 @@
 
                 <div class="paper-card">
 
-                    <h3>{{ work.title }}</h3>
+                    <h3>
+                        {% if work.id %}
+                            <a href="{{ url_for('paper_detail', work_id=work.id) }}">{{ work.title }}</a>
+                        {% else %}
+                            {{ work.title }}
+                        {% endif %}
+                    </h3>
 
                     {% if work.doi %}
                         <a class="badge badge-verified" href="{{ work.doi }}" target="_blank">Verified &middot; DOI</a>
