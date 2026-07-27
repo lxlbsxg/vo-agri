@@ -178,6 +178,30 @@ def _extract_affiliation(raw_author):
     return "Unknown"
 
 
+def _extract_author_summary(raw):
+    return {
+        "id": _short_id(raw.get("id")),
+        "name": raw.get("display_name") or "Unknown",
+        "affiliation": _extract_affiliation(raw),
+        "works_count": raw.get("works_count", 0),
+    }
+
+
+def search_authors(query, per_page=25):
+    response = requests.get(
+        AUTHORS_URL,
+        params={
+            "search": query,
+            "per-page": per_page,
+        },
+        timeout=20,
+    )
+    response.raise_for_status()
+
+    results = response.json().get("results", [])
+    return [_extract_author_summary(raw) for raw in results]
+
+
 def get_author_profile(author_id, per_page=50):
     author_response = requests.get(f"{AUTHORS_URL}/{author_id}", timeout=20)
     author_response.raise_for_status()

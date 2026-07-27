@@ -87,10 +87,16 @@ a:hover {
 .search-form {
     margin: 24px 0 10px;
     display: flex;
+    flex-direction: column;
     gap: 10px;
 }
 
-.search-form input[type="text"] {
+.search-row {
+    display: flex;
+    gap: 10px;
+}
+
+.search-row input[type="text"] {
     flex: 1;
     max-width: 420px;
     padding: 10px 14px;
@@ -99,10 +105,51 @@ a:hover {
     border-radius: 8px;
 }
 
-.search-form input[type="text"]:focus {
+.search-row input[type="text"]:focus {
     outline: none;
     border-color: #2e7d32;
     box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+/* Paper/Author search type toggle */
+.type-toggle {
+    display: inline-flex;
+    border: 1px solid #cde3cf;
+    border-radius: 999px;
+    padding: 3px;
+    width: fit-content;
+}
+
+.type-toggle input[type="radio"] {
+    display: none;
+}
+
+.type-toggle label {
+    padding: 6px 16px;
+    font-size: 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    color: #444;
+}
+
+.type-toggle label.active {
+    background: #2e7d32;
+    color: white;
+    font-weight: bold;
+}
+
+/* "Registered on vo.agri" badge */
+.badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: bold;
+    padding: 3px 10px;
+    border-radius: 999px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #cde3cf;
+    vertical-align: middle;
+    margin-left: 8px;
 }
 
 button, .btn {

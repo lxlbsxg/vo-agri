@@ -11,20 +11,35 @@
 
     <form method="GET" action="/search" class="search-form">
 
-        <input
-            type="text"
-            name="q"
-            placeholder="Search papers..."
-            value="{{ query }}"
-        >
+        <div class="type-toggle">
+            <label class="{{ 'active' if search_type != 'author' else '' }}">
+                <input type="radio" name="type" value="paper" {% if search_type != 'author' %}checked{% endif %}>
+                Papers
+            </label>
+            <label class="{{ 'active' if search_type == 'author' else '' }}">
+                <input type="radio" name="type" value="author" {% if search_type == 'author' %}checked{% endif %}>
+                Authors
+            </label>
+        </div>
 
-        <button type="submit">
-            Search
-        </button>
+        <div class="search-row">
+
+            <input
+                type="text"
+                name="q"
+                placeholder="{{ 'Search authors by name...' if search_type == 'author' else 'Search papers...' }}"
+                value="{{ query }}"
+            >
+
+            <button type="submit">
+                Search
+            </button>
+
+        </div>
 
     </form>
 
-    {% if not query %}
+    {% if not query and search_type != 'author' %}
         <div class="chip-row">
             <span class="chip-label">Popular searches:</span>
             {% for topic in ["food security", "climate adaptation agriculture", "smallholder farmers", "land tenure", "agricultural supply chains", "crop yield climate change"] %}
@@ -37,6 +52,7 @@
         <p>
             You searched for:
             <strong>{{ query }}</strong>
+            ({{ "authors" if search_type == "author" else "papers" }})
         </p>
     {% endif %}
 
@@ -44,82 +60,119 @@
         <p class="paper-info error-text">{{ error }}</p>
     {% endif %}
 
-    {% if query and not papers and not error %}
+    {% if query and not papers and not authors and not error %}
         <p>No results found.</p>
     {% endif %}
 
-    {% if papers %}
+    {% if search_type == 'author' %}
 
-        <h2>Results ({{ papers|length }})</h2>
+        {% if authors %}
 
-        {% for paper in papers %}
+            <h2>Authors ({{ authors|length }})</h2>
 
-            <div class="paper-card">
+            {% for a in authors %}
 
-                <h3>{{ paper.title }}</h3>
+                <div class="paper-card">
 
-                <p class="paper-info">
-                    <strong>Year:</strong>
-                    {{ paper.year or "Unknown" }}
-                </p>
+                    <h3>
+                        <a href="{{ url_for('author_profile', author_id=a.id) }}">{{ a.name }}</a>
+                        {% if a.registered %}
+                            <span class="badge">Registered on vo.agri</span>
+                        {% endif %}
+                    </h3>
 
-                <p class="paper-info">
-                    <strong>Journal:</strong>
-                    {{ paper.journal }}
-                </p>
+                    <p class="paper-info">
+                        <strong>Affiliation:</strong>
+                        {{ a.affiliation }}
+                    </p>
 
-                <p class="paper-info">
-                    <strong>Authors:</strong>
+                    <p class="paper-info">
+                        <strong>Published works:</strong>
+                        {{ a.works_count }}
+                    </p>
 
-                    {% if paper.authors %}
-                        {% for author in paper.authors[:3] %}
-                            {% if author.id %}
-                                <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
-                            {% else %}
-                                {{ author.name }}
-                            {% endif %}{% if not loop.last %}, {% endif %}
-                        {% endfor %}
-                    {% else %}
-                        Unknown
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
+    {% else %}
+
+        {% if papers %}
+
+            <h2>Results ({{ papers|length }})</h2>
+
+            {% for paper in papers %}
+
+                <div class="paper-card">
+
+                    <h3>{{ paper.title }}</h3>
+
+                    <p class="paper-info">
+                        <strong>Year:</strong>
+                        {{ paper.year or "Unknown" }}
+                    </p>
+
+                    <p class="paper-info">
+                        <strong>Journal:</strong>
+                        {{ paper.journal }}
+                    </p>
+
+                    <p class="paper-info">
+                        <strong>Authors:</strong>
+
+                        {% if paper.authors %}
+                            {% for author in paper.authors[:3] %}
+                                {% if author.id %}
+                                    <a href="{{ url_for('author_profile', author_id=author.id) }}">{{ author.name }}</a>
+                                {% else %}
+                                    {{ author.name }}
+                                {% endif %}{% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            Unknown
+                        {% endif %}
+
+                    </p>
+
+                    {% if paper.abstract %}
+                        <p class="paper-info">
+                            <strong>Abstract:</strong>
+                            {{ paper.abstract|truncate(300) }}
+                        </p>
                     {% endif %}
 
-                </p>
-
-                {% if paper.abstract %}
                     <p class="paper-info">
-                        <strong>Abstract:</strong>
-                        {{ paper.abstract|truncate(300) }}
-                    </p>
-                {% endif %}
-
-                <p class="paper-info">
-                    <strong>Citations:</strong>
-                    {{ paper.citations }}
-                </p>
-
-                {% if paper.rank_reason %}
-                    <p class="paper-info" style="font-style: italic; color: #777;">
-                        {{ paper.rank_reason }}
-                    </p>
-                {% endif %}
-
-                {% if paper.doi %}
-
-                    <p class="paper-info">
-
-                        <a href="{{ paper.doi }}" target="_blank">
-
-                            Open Paper
-
-                        </a>
-
+                        <strong>Citations:</strong>
+                        {{ paper.citations }}
                     </p>
 
-                {% endif %}
+                    {% if paper.rank_reason %}
+                        <p class="paper-info" style="font-style: italic; color: #777;">
+                            {{ paper.rank_reason }}
+                        </p>
+                    {% endif %}
 
-            </div>
+                    {% if paper.doi %}
 
-        {% endfor %}
+                        <p class="paper-info">
+
+                            <a href="{{ paper.doi }}" target="_blank">
+
+                                Open Paper
+
+                            </a>
+
+                        </p>
+
+                    {% endif %}
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
 
     {% endif %}
 

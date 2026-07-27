@@ -11,7 +11,12 @@ from werkzeug.utils import secure_filename
 
 from extensions import db, login_manager
 from models import User, UploadedPaper
-from services.openalex import get_author_profile, normalize_author_id, search_papers
+from services.openalex import (
+    get_author_profile,
+    normalize_author_id,
+    search_authors,
+    search_papers,
+)
 
 load_dotenv()
 
@@ -58,25 +63,46 @@ def load_user(user_id):
 
 @app.route("/")
 def home():
-    return render_template("index.html", query="", papers=[], error=None)
+    return render_template(
+        "index.html", query="", search_type="paper", papers=[], authors=[], error=None
+    )
 
 
 @app.route("/search")
 def search():
     query = request.args.get("q", "").strip()
+    search_type = request.args.get("type", "paper")
+    if search_type not in ("paper", "author"):
+        search_type = "paper"
+
     papers = []
+    authors = []
     error = None
 
     if query:
         try:
-            papers = search_papers(query)
+            if search_type == "author":
+                authors = search_authors(query)
+                found_ids = [a["id"] for a in authors if a["id"]]
+                registered_ids = set()
+                if found_ids:
+                    registered_ids = {
+                        u.openalex_author_id
+                        for u in User.query.filter(User.openalex_author_id.in_(found_ids)).all()
+                    }
+                for a in authors:
+                    a["registered"] = a["id"] in registered_ids
+            else:
+                papers = search_papers(query)
         except RequestException:
             error = "Could not reach OpenAlex right now. Please try again."
 
     return render_template(
         "index.html",
         query=query,
+        search_type=search_type,
         papers=papers,
+        authors=authors,
         error=error,
     )
 
