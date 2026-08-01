@@ -8,19 +8,21 @@
 
 <body>
 
-    <nav class="topnav">
-        <a href="{{ url_for('home') }}" class="brand">vo.agri</a>
-        <div class="nav-links">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('documents') }}">My Documents</a>
-                <a href="{{ url_for('profile_edit') }}">My Profile</a>
-                <a href="{{ url_for('logout') }}">Log out</a>
-            {% else %}
-                <a href="{{ url_for('login') }}">Log in</a>
-                <a href="{{ url_for('register') }}">Register</a>
-            {% endif %}
-        </div>
-    </nav>
+    {% if not request.args.get('embed') %}
+        <nav class="topnav">
+            <a href="{{ url_for('home') }}" class="brand">vo.agri</a>
+            <div class="nav-links">
+                {% if current_user.is_authenticated %}
+                    <a href="{{ url_for('documents') }}">My Documents</a>
+                    <a href="{{ url_for('profile_edit') }}">My Profile</a>
+                    <a href="{{ url_for('logout') }}">Log out</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}">Log in</a>
+                    <a href="{{ url_for('register') }}">Register</a>
+                {% endif %}
+            </div>
+        </nav>
+    {% endif %}
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
@@ -32,9 +34,23 @@
         {% endif %}
     {% endwith %}
 
-    {% block content %}{% endblock %}
+    <div id="split-container" class="split-container">
+        <div id="split-left" class="split-left">
+            {% block content %}{% endblock %}
+        </div>
+        <div id="split-right" class="split-right">
+            <div class="split-right-header">
+                <span>Writing alongside</span>
+                <button type="button" id="split-close" class="btn-small btn-disabled">&times; Close</button>
+            </div>
+            <iframe id="split-iframe" class="split-iframe" src="about:blank" title="Document editor"></iframe>
+        </div>
+    </div>
 
     <script src="{{ url_for('static', filename='app.js') }}"></script>
+    {% if not request.args.get('embed') %}
+        <script src="{{ url_for('static', filename='split.js') }}"></script>
+    {% endif %}
 
 </body>
 

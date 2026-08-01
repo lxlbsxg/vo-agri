@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% import "_macros.html" as macros with context %}
 
 {% block title %}{{ paper.title if paper else "Paper" }} - vo.agri{% endblock %}
 
@@ -23,6 +24,11 @@
         {% if error %}
             <p class="paper-info error-text">{{ error }}</p>
         {% endif %}
+
+        <div class="paper-actions">
+            {{ macros.add_to_doc_button(paper, current_document) }}
+            {{ macros.write_alongside_button(current_document) }}
+        </div>
 
         {% if paper.authors %}
             <p class="paper-info">

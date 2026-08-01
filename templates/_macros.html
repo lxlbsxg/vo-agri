@@ -1,0 +1,39 @@
+{% macro add_to_doc_button(paper, current_document) %}
+
+    {% if current_document and paper.already_added %}
+        <button type="button" class="btn-small btn-disabled" disabled>Already added</button>
+    {% elif current_document %}
+        <form method="POST" action="{{ url_for('add_citation', doc_id=current_document.id) }}" class="add-to-doc-form">
+            <input type="hidden" name="title" value="{{ paper.title }}">
+            <input type="hidden" name="authors" value="{{ paper.authors[:3]|map(attribute='name')|join(', ') if paper.authors else 'Unknown' }}">
+            <input type="hidden" name="year" value="{{ paper.year or '' }}">
+            <input type="hidden" name="journal" value="{{ paper.journal or '' }}">
+            <input type="hidden" name="doi" value="{{ paper.doi or '' }}">
+            <input type="hidden" name="paper_id" value="{{ paper.id or '' }}">
+            <button type="submit" class="btn-small">+ Add to "{{ current_document.title }}"</button>
+        </form>
+    {% elif current_user.is_authenticated %}
+        <p class="paper-info add-to-doc-prompt">
+            <a href="{{ url_for('documents') }}">Create a document</a> to start saving citations.
+        </p>
+    {% else %}
+        <p class="paper-info add-to-doc-prompt">
+            <a href="{{ url_for('login') }}">Log in</a> to save citations to a document.
+        </p>
+    {% endif %}
+
+{% endmacro %}
+
+{% macro write_alongside_button(current_document) %}
+
+    {% if current_document %}
+        <button type="button" class="btn-small write-alongside-btn" data-write-alongside="{{ current_document.id }}">
+            &#9998; Write alongside
+        </button>
+    {% elif current_user.is_authenticated %}
+        <p class="paper-info add-to-doc-prompt">
+            <a href="{{ url_for('documents') }}">Create a document</a> to write alongside your research.
+        </p>
+    {% endif %}
+
+{% endmacro %}

@@ -328,7 +328,16 @@ def paper_detail(work_id):
     except RequestException:
         error = "Could not reach OpenAlex right now. Please try again."
 
-    return render_template("paper.html", paper=paper, error=error)
+    current_document = _current_document()
+    if paper:
+        _annotate_already_added([paper], current_document)
+
+    return render_template(
+        "paper.html",
+        paper=paper,
+        error=error,
+        current_document=current_document,
+    )
 
 
 @app.route("/register", methods=["GET", "POST"])

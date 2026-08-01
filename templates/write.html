@@ -4,7 +4,9 @@
 
 {% block content %}
 
-    <p><a href="{{ url_for('documents') }}">&larr; My documents</a></p>
+    {% if not request.args.get('embed') %}
+        <p><a href="{{ url_for('documents') }}">&larr; My documents</a></p>
+    {% endif %}
 
     <form method="POST" action="{{ url_for('save_document', doc_id=doc.id) }}" id="doc-form" class="write-form">
 
