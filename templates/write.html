@@ -8,7 +8,7 @@
         <p><a href="{{ url_for('documents') }}">&larr; My documents</a></p>
     {% endif %}
 
-    <form method="POST" action="{{ url_for('save_document', doc_id=doc.id) }}" id="doc-form" class="write-form">
+    <form method="POST" action="{{ url_for('save_document', doc_id=doc.id, embed=request.args.get('embed')) }}" id="doc-form" class="write-form">
 
         <div class="doc-title-row">
             <input
@@ -39,6 +39,18 @@
     <script type="application/json" id="annotations-data">{{ annotations_json|safe }}</script>
 
     <script>
+        // Tell the parent page (the "Write alongside" split view, if we're
+        // loaded inside it) which papers are currently cited here, so it can
+        // keep "Add to document" buttons in sync — greying out ones already
+        // in the doc, and un-greying ones that just got removed + saved.
+        if (window.parent && window.parent !== window) {
+            var citationIds = Array.prototype.map.call(
+                document.querySelectorAll(".citation-block[data-paper-id]"),
+                function (el) { return el.dataset.paperId; }
+            );
+            window.parent.postMessage({ source: "vo-agri-write", citationIds: citationIds }, window.location.origin);
+        }
+
         document.querySelectorAll(".editor-toolbar button").forEach(function (btn) {
             btn.addEventListener("click", function () {
                 document.execCommand(btn.dataset.command, false, null);

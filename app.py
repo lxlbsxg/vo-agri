@@ -584,7 +584,7 @@ def save_document(doc_id):
     db.session.commit()
 
     flash("Document saved.", "success")
-    return redirect(url_for("write_document", doc_id=doc.id))
+    return redirect(url_for("write_document", doc_id=doc.id, embed=request.args.get("embed")))
 
 
 @app.route("/write/<int:doc_id>/add_citation", methods=["POST"])
