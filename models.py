@@ -86,3 +86,55 @@ class UploadedPaper(db.Model):
         "User",
         backref=db.backref("uploaded_papers", order_by="UploadedPaper.year.desc()"),
     )
+
+
+LAB_RECORD_TYPES = ["Cultivation", "Bacteria culture", "Fermentation", "Other"]
+LAB_RECORD_STATUSES = ["in_progress", "completed"]
+
+
+class LabRecord(db.Model):
+    """A single experiment (e.g. one cultivation run, one culture batch) —
+    distinct from a Document/UploadedPaper, since it's an ongoing process
+    log rather than a finished piece of writing. The actual notes live in
+    LabRecordEntry, appended over time rather than written once."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False)
+    experiment_type = db.Column(db.String(50), nullable=False)
+    start_date = db.Column(db.Date, nullable=False)
+    status = db.Column(db.String(20), nullable=False, default="in_progress")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship(
+        "User",
+        backref=db.backref("lab_records", order_by="LabRecord.start_date.desc()"),
+    )
+
+
+class LabRecordEntry(db.Model):
+    """One timeline entry within a LabRecord (e.g. "Day 3: sprouted") —
+    each entry can carry its own photos via LabRecordImage."""
+
+    id = db.Column(db.Integer, primary_key=True)
+    lab_record_id = db.Column(db.Integer, db.ForeignKey("lab_record.id"), nullable=False, index=True)
+    body = db.Column(db.Text, default="")
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    lab_record = db.relationship(
+        "LabRecord",
+        backref=db.backref("entries", order_by="LabRecordEntry.created_at"),
+    )
+
+
+class LabRecordImage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    entry_id = db.Column(db.Integer, db.ForeignKey("lab_record_entry.id"), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    entry = db.relationship(
+        "LabRecordEntry",
+        backref=db.backref("images", order_by="LabRecordImage.id"),
+    )

@@ -14,6 +14,7 @@
             <div class="nav-links">
                 {% if current_user.is_authenticated %}
                     <a href="{{ url_for('documents') }}">My Documents</a>
+                    <a href="{{ url_for('lab_home') }}">Lab Notes</a>
                     <a href="{{ url_for('profile_edit') }}">My Profile</a>
                     <a href="{{ url_for('logout') }}">Log out</a>
                 {% else %}

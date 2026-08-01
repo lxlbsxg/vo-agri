@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Lab Notes - vo.agri{% endblock %}
+
+{% block content %}
+
+    <div class="documents-header">
+        <h1>Lab notes</h1>
+    </div>
+
+    <p class="paper-info">
+        Track ongoing experiments — cultivation runs, bacteria cultures, and
+        the like — as a running timeline instead of a single write-up.
+    </p>
+
+    <h2>Start a new experiment</h2>
+
+    <form method="POST" action="{{ url_for('new_lab_record') }}" class="form-card">
+
+        <div class="form-field">
+            <label for="title">Title</label>
+            <input type="text" id="title" name="title" required>
+        </div>
+
+        <div class="form-field">
+            <label for="experiment_type">Experiment type</label>
+            <select id="experiment_type" name="experiment_type" required>
+                {% for type in experiment_types %}
+                    <option value="{{ type }}">{{ type }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="form-field">
+            <label for="start_date">Start date</label>
+            <input type="date" id="start_date" name="start_date" value="{{ today }}" required>
+        </div>
+
+        <button type="submit">Create experiment</button>
+
+    </form>
+
+    {% if records %}
+
+        <h2>Your experiments ({{ records|length }})</h2>
+
+        {% for record in records %}
+
+            <a class="paper-card lab-card" href="{{ url_for('lab_record_detail', record_id=record.id) }}">
+
+                <h3>{{ record.title }}</h3>
+
+                <span class="badge">{{ record.experiment_type }}</span>
+                <span class="badge lab-status-{{ record.status }}">
+                    {{ "In progress" if record.status == "in_progress" else "Completed" }}
+                </span>
+
+                <p class="paper-info">
+                    Started {{ record.start_date.strftime('%Y-%m-%d') }}
+                    &middot; {{ record.entries|length }} entr{{ "y" if record.entries|length == 1 else "ies" }}
+                </p>
+
+            </a>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>You haven't started any experiments yet.</p>
+
+    {% endif %}
+
+{% endblock %}

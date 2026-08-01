@@ -138,6 +138,35 @@
 
         {% endif %}
 
+        {% if lab_records %}
+
+            <h2>Lab notes by {{ author.name if author else professor.name }} ({{ lab_records|length }})</h2>
+            <p class="paper-info" style="font-style: italic; color: #777;">
+                Ongoing and past experiment logs — cultivation, cultures, and the like.
+            </p>
+
+            {% for record in lab_records %}
+
+                <div class="paper-card">
+
+                    <h3>{{ record.title }}</h3>
+
+                    <span class="badge">{{ record.experiment_type }}</span>
+                    <span class="badge lab-status-{{ record.status }}">
+                        {{ "In progress" if record.status == "in_progress" else "Completed" }}
+                    </span>
+
+                    <p class="paper-info">
+                        Started {{ record.start_date.strftime('%Y-%m-%d') }}
+                        &middot; {{ record.entries|length }} entr{{ "y" if record.entries|length == 1 else "ies" }}
+                    </p>
+
+                </div>
+
+            {% endfor %}
+
+        {% endif %}
+
     {% endif %}
 
 {% endblock %}

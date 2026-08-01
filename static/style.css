@@ -686,3 +686,74 @@ body.split-active .split-right {
         height: 70vh;
     }
 }
+
+/* Form fields beyond plain <input> — select/textarea didn't have their own
+   box styling before, they just inherited the browser default. */
+.form-field select,
+.form-field textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    font-family: inherit;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.form-field select:focus,
+.form-field textarea:focus {
+    outline: none;
+    border-color: #2e7d32;
+    box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+}
+
+/* Lab notes */
+.lab-status-in_progress {
+    background: #fff8e1;
+    color: #8a6d00;
+    border-color: #f0dfa1;
+}
+
+.lab-status-completed {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-color: #cde3cf;
+}
+
+.lab-status-form {
+    margin: 12px 0;
+}
+
+.lab-entry {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 14px;
+}
+
+.lab-entry-date {
+    font-size: 12px;
+    font-weight: bold;
+    color: #777;
+    margin: 0 0 6px;
+}
+
+.lab-entry-body {
+    white-space: pre-wrap;
+    margin: 0 0 10px;
+}
+
+.lab-entry-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.lab-entry-images img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+}

@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}{{ record.title }} - vo.agri{% endblock %}
+
+{% block content %}
+
+    <p><a href="{{ url_for('lab_home') }}">&larr; Lab notes</a></p>
+
+    <h1>{{ record.title }}</h1>
+
+    <span class="badge">{{ record.experiment_type }}</span>
+    <span class="badge lab-status-{{ record.status }}">
+        {{ "In progress" if record.status == "in_progress" else "Completed" }}
+    </span>
+
+    <p class="paper-info">
+        <strong>Started:</strong> {{ record.start_date.strftime('%Y-%m-%d') }}
+    </p>
+
+    <form method="POST" action="{{ url_for('update_lab_record_status', record_id=record.id) }}" class="lab-status-form">
+        {% if record.status == "in_progress" %}
+            <input type="hidden" name="status" value="completed">
+            <button type="submit" class="btn-small">Mark as completed</button>
+        {% else %}
+            <input type="hidden" name="status" value="in_progress">
+            <button type="submit" class="btn-small">Mark as in progress</button>
+        {% endif %}
+    </form>
+
+    <h2>Add an entry</h2>
+
+    <form method="POST" action="{{ url_for('add_lab_entry', record_id=record.id) }}" enctype="multipart/form-data" class="form-card">
+
+        <div class="form-field">
+            <label for="body">Notes</label>
+            <textarea id="body" name="body" rows="4" placeholder="Day 3: sprouted..."></textarea>
+        </div>
+
+        <div class="form-field">
+            <label for="images">Photos (JPG/PNG, up to 5MB each, 6 max)</label>
+            <input type="file" id="images" name="images" accept="image/jpeg,image/png" multiple>
+        </div>
+
+        <button type="submit">Add entry</button>
+
+    </form>
+
+    <h2>Timeline</h2>
+
+    {% if record.entries %}
+
+        {% for entry in record.entries|reverse %}
+
+            <div class="lab-entry">
+
+                <p class="lab-entry-date">{{ entry.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+
+                {% if entry.body %}
+                    <p class="lab-entry-body">{{ entry.body }}</p>
+                {% endif %}
+
+                {% if entry.images %}
+                    <div class="lab-entry-images">
+                        {% for image in entry.images %}
+                            <a href="{{ url_for('static', filename='uploads/lab_images/' + image.filename) }}" target="_blank">
+                                <img src="{{ url_for('static', filename='uploads/lab_images/' + image.filename) }}" alt="">
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+            </div>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>No entries yet — add the first one above.</p>
+
+    {% endif %}
+
+{% endblock %}

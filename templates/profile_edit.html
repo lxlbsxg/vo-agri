@@ -141,4 +141,37 @@
 
     {% endif %}
 
+    <div class="documents-header">
+        <h2>Your lab notes</h2>
+        <a href="{{ url_for('lab_home') }}" class="btn-small">Go to lab notes</a>
+    </div>
+
+    {% if current_user.lab_records %}
+
+        {% for record in current_user.lab_records %}
+
+            <a class="paper-card lab-card" href="{{ url_for('lab_record_detail', record_id=record.id) }}">
+
+                <h3>{{ record.title }}</h3>
+
+                <span class="badge">{{ record.experiment_type }}</span>
+                <span class="badge lab-status-{{ record.status }}">
+                    {{ "In progress" if record.status == "in_progress" else "Completed" }}
+                </span>
+
+                <p class="paper-info">
+                    Started {{ record.start_date.strftime('%Y-%m-%d') }}
+                    &middot; {{ record.entries|length }} entr{{ "y" if record.entries|length == 1 else "ies" }}
+                </p>
+
+            </a>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>No experiments logged yet.</p>
+
+    {% endif %}
+
 {% endblock %}

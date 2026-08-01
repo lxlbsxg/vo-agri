@@ -14,7 +14,16 @@ from werkzeug.exceptions import RequestEntityTooLarge
 from werkzeug.utils import secure_filename
 
 from extensions import db, login_manager
-from models import Annotation, Document, User, UploadedPaper
+from models import (
+    LAB_RECORD_TYPES,
+    Annotation,
+    Document,
+    LabRecord,
+    LabRecordEntry,
+    LabRecordImage,
+    User,
+    UploadedPaper,
+)
 from services.openalex import (
     get_author_profile,
     get_paper,
@@ -51,6 +60,12 @@ MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10 MB
 UPLOAD_DIR = os.path.join(BASE_DIR, "static", "uploads", "papers")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
+MAX_IMAGE_SIZE = 5 * 1024 * 1024  # 5 MB per lab note photo
+MAX_IMAGES_PER_ENTRY = 6
+ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png"}
+LAB_IMAGE_DIR = os.path.join(BASE_DIR, "static", "uploads", "lab_images")
+os.makedirs(LAB_IMAGE_DIR, exist_ok=True)
+
 SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError(
@@ -73,7 +88,12 @@ app = Flask(__name__)
 app.config["SECRET_KEY"] = SECRET_KEY
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-app.config["MAX_CONTENT_LENGTH"] = MAX_UPLOAD_SIZE
+# The request as a whole can carry several lab photos at once (each capped
+# individually at MAX_IMAGE_SIZE below), so the overall cap needs headroom
+# beyond a single MAX_UPLOAD_SIZE paper PDF.
+app.config["MAX_CONTENT_LENGTH"] = max(
+    MAX_UPLOAD_SIZE, MAX_IMAGES_PER_ENTRY * MAX_IMAGE_SIZE + 512 * 1024
+)
 
 db.init_app(app)
 login_manager.init_app(app)
@@ -84,8 +104,8 @@ with app.app_context():
 
 @app.errorhandler(RequestEntityTooLarge)
 def handle_file_too_large(_error):
-    flash("That file is too large. Maximum size is 10MB.", "error")
-    return redirect(url_for("profile_edit"))
+    flash("That upload is too large.", "error")
+    return redirect(request.referrer or url_for("home"))
 
 
 def _has_pdf_extension(filename):
@@ -96,6 +116,23 @@ def _looks_like_pdf(file_storage):
     header = file_storage.stream.read(5)
     file_storage.stream.seek(0)
     return header == b"%PDF-"
+
+
+def _has_image_extension(filename):
+    return os.path.splitext(filename.lower())[1] in ALLOWED_IMAGE_EXTENSIONS
+
+
+def _looks_like_image(file_storage):
+    header = file_storage.stream.read(8)
+    file_storage.stream.seek(0)
+    return header.startswith(b"\xff\xd8\xff") or header.startswith(b"\x89PNG\r\n\x1a\n")
+
+
+def _file_size(file_storage):
+    file_storage.stream.seek(0, os.SEEK_END)
+    size = file_storage.stream.tell()
+    file_storage.stream.seek(0)
+    return size
 
 
 def _merge_author_results(external_authors, local_users):
@@ -308,6 +345,7 @@ def author_profile(author_id):
     # kept in a separate section from the OpenAlex-fetched list.
     professor = User.query.filter_by(openalex_author_id=author_id).first()
     uploaded_papers = professor.uploaded_papers if professor else []
+    lab_records = professor.lab_records if professor else []
 
     return render_template(
         "author.html",
@@ -315,6 +353,7 @@ def author_profile(author_id):
         error=error,
         professor=professor,
         uploaded_papers=uploaded_papers,
+        lab_records=lab_records,
     )
 
 
@@ -616,6 +655,131 @@ def add_citation(doc_id):
     session["current_document_id"] = doc.id
     flash("Citation added to your document.", "success")
     return redirect(url_for("write_document", doc_id=doc.id))
+
+
+@app.route("/lab")
+@login_required
+def lab_home():
+    records = (
+        LabRecord.query.filter_by(user_id=current_user.id)
+        .order_by(LabRecord.start_date.desc())
+        .all()
+    )
+    return render_template(
+        "lab.html",
+        records=records,
+        experiment_types=LAB_RECORD_TYPES,
+        today=datetime.utcnow().date().isoformat(),
+    )
+
+
+@app.route("/lab/new", methods=["POST"])
+@login_required
+def new_lab_record():
+    title = request.form.get("title", "").strip()
+    experiment_type = request.form.get("experiment_type", "").strip()
+    start_date_raw = request.form.get("start_date", "").strip()
+
+    error = None
+    start_date = None
+    if not title:
+        error = "Title is required."
+    elif experiment_type not in LAB_RECORD_TYPES:
+        error = "Choose a valid experiment type."
+    else:
+        try:
+            start_date = datetime.strptime(start_date_raw, "%Y-%m-%d").date()
+        except ValueError:
+            error = "Enter a valid start date."
+
+    if error:
+        flash(error, "error")
+        return redirect(url_for("lab_home"))
+
+    record = LabRecord(
+        user_id=current_user.id,
+        title=title,
+        experiment_type=experiment_type,
+        start_date=start_date,
+        status="in_progress",
+    )
+    db.session.add(record)
+    db.session.commit()
+
+    flash("Lab record created.", "success")
+    return redirect(url_for("lab_record_detail", record_id=record.id))
+
+
+def _get_owned_lab_record(record_id):
+    record = db.session.get(LabRecord, record_id)
+    if record is None or record.user_id != current_user.id:
+        abort(404)
+    return record
+
+
+@app.route("/lab/<int:record_id>")
+@login_required
+def lab_record_detail(record_id):
+    record = _get_owned_lab_record(record_id)
+    return render_template("lab_detail.html", record=record)
+
+
+@app.route("/lab/<int:record_id>/status", methods=["POST"])
+@login_required
+def update_lab_record_status(record_id):
+    record = _get_owned_lab_record(record_id)
+    status = request.form.get("status", "")
+    if status not in ("in_progress", "completed"):
+        abort(400)
+
+    record.status = status
+    db.session.commit()
+    return redirect(url_for("lab_record_detail", record_id=record.id))
+
+
+@app.route("/lab/<int:record_id>/entries", methods=["POST"])
+@login_required
+def add_lab_entry(record_id):
+    record = _get_owned_lab_record(record_id)
+
+    body = request.form.get("body", "").strip()
+    images = [f for f in request.files.getlist("images") if f and f.filename]
+
+    error = None
+    if not body and not images:
+        error = "Add some notes or at least one photo."
+    elif len(images) > MAX_IMAGES_PER_ENTRY:
+        error = f"Attach at most {MAX_IMAGES_PER_ENTRY} images per entry."
+    else:
+        for image in images:
+            if not _has_image_extension(image.filename):
+                error = "Only JPG and PNG images are allowed."
+                break
+            if _file_size(image) > MAX_IMAGE_SIZE:
+                error = "Each image must be 5MB or smaller."
+                break
+            if not _looks_like_image(image):
+                error = "One of those files doesn't look like a valid image."
+                break
+
+    if error:
+        flash(error, "error")
+        return redirect(url_for("lab_record_detail", record_id=record.id))
+
+    entry = LabRecordEntry(lab_record_id=record.id, body=body)
+    db.session.add(entry)
+
+    for image in images:
+        safe_name = secure_filename(image.filename)
+        stored_name = f"{uuid.uuid4().hex}_{safe_name}"
+        image.save(os.path.join(LAB_IMAGE_DIR, stored_name))
+        entry.images.append(LabRecordImage(filename=stored_name))
+
+    record.updated_at = datetime.utcnow()
+    db.session.commit()
+
+    flash("Entry added.", "success")
+    return redirect(url_for("lab_record_detail", record_id=record.id))
 
 
 if __name__ == "__main__":
